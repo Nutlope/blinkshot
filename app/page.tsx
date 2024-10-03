@@ -12,7 +12,7 @@ import {
 
 export default function Home() {
   return (
-    <div className="mt-10 flex flex-col items-center justify-center px-5">
+    <div className="flex h-full flex-col items-center justify-center px-5 pt-10">
       <div>
         <Logo />
       </div>
@@ -47,6 +47,21 @@ export default function Home() {
           </button>
         </div>
       </div>
+
+      <div className="w-full grow bg-green-500"></div>
+
+      <footer className="w-full py-6 text-center text-gray-300">
+        <p>Powered by Together.ai & Flux</p>
+
+        <div className="mt-4 flex items-center justify-between">
+          <p className="whitespace-nowrap text-xs">100% free and open source</p>
+
+          <div className="flex gap-1">
+            <button className="border p-1 text-xs">GitHub</button>
+            <button className="border p-1 text-xs">Twitter</button>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
