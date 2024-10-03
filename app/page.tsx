@@ -1,8 +1,11 @@
 "use client";
 
-import ArrowIcon from "@/components/arrow-icon";
+import ArrowIcon from "@/components/icons/arrow-icon";
+import GithubIcon from "@/components/icons/github-icon";
+import SparklesIcon from "@/components/icons/sparkles-icon";
+import XIcon from "@/components/icons/x-icon";
 import Logo from "@/components/logo";
-import SparklesIcon from "@/components/sparkles-icon";
+import Spinner from "@/components/spinner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,12 +15,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import imagePlaceholder from "@/public/image-placeholder.png";
 import Image from "next/image";
 import { FormEvent, useState } from "react";
-import imagePlaceholder from "@/public/image-placeholder.png";
-import Spinner from "@/components/spinner";
-import GithubIcon from "@/components/github-icon";
-import XIcon from "@/components/x-icon";
 
 let models = [
   { label: "Flux 1.1 Pro", value: "black-forest-labs/FLUX.1.1-pro" },
