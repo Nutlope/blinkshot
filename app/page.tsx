@@ -172,9 +172,6 @@ export default function Home() {
                     animationDelay: `${i * 75}ms`,
                   }}
                 />
-                <div className="mt-1 text-center text-sm text-gray-300">
-                  <p>{(image.timings.inference * 1000).toFixed(2)}ms</p>
-                </div>
               </div>
             ))}
           </div>

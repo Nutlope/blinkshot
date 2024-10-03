@@ -2,16 +2,15 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import bgPattern from "@/public/bg-pattern-transparent.png";
+import PlausibleProvider from "next-plausible";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
   variable: "--font-geist-sans",
-  // weight: "100 900",
 });
 const geistMono = localFont({
   src: "./fonts/GeistMonoVF.woff",
   variable: "--font-geist-mono",
-  // weight: "100 500 900",
 });
 
 let title = "Blinkshot – AI Image Playground";
@@ -51,6 +50,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full">
+      <head>
+        <PlausibleProvider domain="blinkshot.io" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} dark h-full min-h-full bg-[length:6px] font-mono text-gray-100 antialiased`}
         style={{ backgroundImage: `url(${bgPattern.src}` }}

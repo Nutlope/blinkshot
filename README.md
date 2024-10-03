@@ -27,10 +27,9 @@
 
 ## Future Tasks
 
-- [ ] Add analytics
 - [ ] Fix the enhance prompt thing
 - [ ] Add links to the footer
-
+- [ ] Add realtime mode, where you get one image and it can change as you type
 - [ ] On hover, have a download button
 - [ ] Let people play around with resolutions
 - [ ] Add themes
