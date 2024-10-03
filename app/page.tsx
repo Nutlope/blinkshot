@@ -16,6 +16,8 @@ import Image from "next/image";
 import { FormEvent, useState } from "react";
 import imagePlaceholder from "@/public/image-placeholder.png";
 import Spinner from "@/components/spinner";
+import GithubIcon from "@/components/github-icon";
+import XIcon from "@/components/x-icon";
 
 let models = [
   { label: "Flux 1.1 Pro", value: "black-forest-labs/FLUX.1.1-pro" },
@@ -45,7 +47,9 @@ export default function Home() {
   return (
     <div className="flex h-full flex-col px-5">
       <header className="flex justify-center pt-6">
-        <Logo />
+        <a href="https://www.together.ai/" target="_blank">
+          <Logo />
+        </a>
       </header>
 
       <div className="flex justify-center">
@@ -141,12 +145,26 @@ export default function Home() {
       <footer className="mt-16 w-full items-center pb-10 text-center text-gray-300 md:flex md:justify-between">
         <p>Powered by Together.ai & Flux</p>
 
-        <div className="mt-4 flex items-center justify-between md:mt-0 md:gap-6">
-          <p className="whitespace-nowrap text-xs">100% free and open source</p>
+        <div className="mt-8 flex items-center justify-center md:mt-0 md:justify-between md:gap-6">
+          <p className="hidden whitespace-nowrap text-xs md:block">
+            100% free and open source
+          </p>
 
-          <div className="flex gap-1">
-            <button className="border p-1 text-xs">GitHub</button>
-            <button className="border p-1 text-xs">Twitter</button>
+          <div className="flex gap-6 md:gap-2">
+            <Button
+              variant="outline"
+              className="inline-flex items-center gap-2"
+            >
+              <GithubIcon className="size-4" />
+              GitHub
+            </Button>
+            <Button
+              variant="outline"
+              className="inline-flex items-center gap-2"
+            >
+              <XIcon className="size-3" />
+              Twitter
+            </Button>
           </div>
         </div>
       </footer>
