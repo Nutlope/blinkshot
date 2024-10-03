@@ -162,23 +162,25 @@ export default function Home() {
         )}
       </div>
 
-      <footer className="mt-16 w-full items-center pb-10 text-center text-gray-300 md:flex md:justify-between">
+      <footer className="mt-16 w-full items-center pb-10 text-center text-gray-300 md:flex md:justify-between md:text-xs lg:text-sm">
         <p>Powered by Together.ai & Flux</p>
 
         <div className="mt-8 flex items-center justify-center md:mt-0 md:justify-between md:gap-6">
-          <p className="hidden whitespace-nowrap text-xs md:block">
+          <p className="hidden whitespace-nowrap md:block">
             100% free and open source
           </p>
 
           <div className="flex gap-6 md:gap-2">
             <Button
               variant="outline"
+              size="sm"
               className="inline-flex items-center gap-2"
             >
               <GithubIcon className="size-4" />
               GitHub
             </Button>
             <Button
+              size="sm"
               variant="outline"
               className="inline-flex items-center gap-2"
             >
