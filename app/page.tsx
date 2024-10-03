@@ -44,7 +44,10 @@ export default function Home() {
     e.preventDefault();
     setStatus("loading");
 
-    let res = await fetch("/api/generateImages", { method: "POST" });
+    let res = await fetch("/api/generateImages", {
+      method: "POST",
+      body: JSON.stringify({ model, prompt }),
+    });
     let json = await res.json();
 
     setStatus("generated");
@@ -65,6 +68,7 @@ export default function Home() {
           <div className="relative">
             <Input
               placeholder="Describe your image..."
+              required
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               className="h-12 border-[0.3px] border-gray-300 border-opacity-50 bg-gray-400 placeholder-gray-300 lg:h-16 lg:px-4 lg:text-base"
