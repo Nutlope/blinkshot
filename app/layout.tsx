@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import bgPattern from "@/public/bg-pattern-transparent.png";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -26,7 +27,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased font-mono dark`}
+        className={`${geistSans.variable} ${geistMono.variable} dark bg-[length:6px] font-mono text-gray-100 antialiased`}
+        style={{ backgroundImage: `url(${bgPattern.src}` }}
       >
         {children}
       </body>

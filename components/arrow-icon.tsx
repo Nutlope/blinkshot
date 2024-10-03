@@ -1,4 +1,6 @@
-export default function ArrowIcon(props: any) {
+import { ComponentProps } from "react";
+
+export default function ArrowIcon(props: ComponentProps<"svg">) {
   return (
     <svg
       width={22}
