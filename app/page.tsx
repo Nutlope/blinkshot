@@ -53,23 +53,24 @@ export default function Home() {
           <fieldset disabled={isLoading}>
             <div className="relative">
               <Input
+                spellCheck={false}
                 placeholder="Describe your image..."
                 required
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                className="h-12 border-[0.3px] border-gray-300 border-opacity-50 bg-gray-400 placeholder-gray-300 lg:h-16 lg:px-4 lg:text-base"
+                className="h-12 border-gray-300 border-opacity-50 bg-gray-400 pl-4 pr-16 placeholder-gray-300 lg:h-14 lg:pl-4 lg:text-base"
               />
               <div className="absolute right-2 top-0 flex h-full items-center justify-center lg:right-4">
-                <button
+                <Button
                   type="submit"
-                  className="group relative flex size-8 items-center justify-center rounded bg-white"
+                  className="group relative size-8 p-0 disabled:bg-transparent disabled:text-white"
                 >
-                  <ArrowIcon className="size-7 group-disabled:hidden" />
+                  <ArrowIcon className="size-8 group-disabled:hidden" />
 
                   <div className="absolute inset-0 hidden items-center justify-center group-disabled:flex">
                     <Spinner className="size-4" />
                   </div>
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -111,8 +112,8 @@ export default function Home() {
               Generate images in seconds
             </p>
             <p className="mt-4 text-balance text-sm text-gray-300 md:text-base lg:text-lg">
-              Type a prompt, choose your model, enhance your prompt, and
-              generate images in the blink of an eye.
+              Enter a prompt, choose a model, enhance your prompt, and generate
+              images in the blink of an eye.
             </p>
           </div>
         ) : (
