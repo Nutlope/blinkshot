@@ -20,6 +20,8 @@ export async function POST(req: Request) {
         n: 1,
         width: 1024,
         height: 768,
+        // @ts-expect-error - this is not typed in the API
+        response_format: "base64",
       }),
     ),
   );

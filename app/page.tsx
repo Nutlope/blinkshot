@@ -7,7 +7,6 @@ import XIcon from "@/components/icons/x-icon";
 import Logo from "@/components/logo";
 import Spinner from "@/components/spinner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -37,7 +36,11 @@ export default function Home() {
   let [isLoading, setIsLoading] = useState(false);
   let [prompt, setPrompt] = useState("");
   let [model, setModel] = useState(models[0].value);
-  let [images, setImages] = useState<{ url: string }[]>([]);
+  let [images, setImages] = useState<
+    { b64_json: string; timings: { inference: number } }[]
+  >([]);
+
+  console.log(images);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -156,19 +159,22 @@ export default function Home() {
         ) : (
           <div className="mt-12 grid w-full max-w-5xl gap-8 md:grid-cols-2">
             {images.map((image, i) => (
-              <div key={image.url}>
+              <div key={image.b64_json}>
                 <Image
                   placeholder="blur"
                   blurDataURL={imagePlaceholder.blurDataURL}
                   width={1024}
                   height={768}
-                  src={image.url}
+                  src={`data:image/png;base64,${image.b64_json}`}
                   alt=""
                   className={`${isLoading ? "animate-pulse" : ""} max-w-full rounded-lg object-cover shadow-sm shadow-black`}
                   style={{
                     animationDelay: `${i * 75}ms`,
                   }}
                 />
+                <div className="mt-1 text-center text-sm text-gray-300">
+                  <p>{(image.timings.inference * 1000).toFixed(2)}ms</p>
+                </div>
               </div>
             ))}
           </div>
