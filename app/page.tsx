@@ -32,16 +32,32 @@ export default function Home() {
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    const submitEvent = e.nativeEvent as SubmitEvent;
+    const submitter = submitEvent.submitter as HTMLButtonElement | null;
+
+    if (!submitter) return;
+
     setIsLoading(true);
 
-    let res = await fetch("/api/generateImages", {
-      method: "POST",
-      body: JSON.stringify({ model, prompt }),
-    });
-    let json = await res.json();
+    if (submitter.value === "generate") {
+      let res = await fetch("/api/generateImages", {
+        method: "POST",
+        body: JSON.stringify({ model, prompt }),
+      });
+      let json = await res.json();
+
+      setImages(json);
+    } else if (submitter.value === "enhance") {
+      let res = await fetch("/api/enhancePrompt", {
+        method: "POST",
+        body: JSON.stringify({ prompt }),
+      });
+      let json = await res.json();
+      setPrompt(json.prompt);
+    }
 
     setIsLoading(false);
-    setImages(json);
   }
 
   return (
@@ -67,6 +83,8 @@ export default function Home() {
               <div className="absolute right-2 top-0 flex h-full items-center justify-center lg:right-4">
                 <Button
                   type="submit"
+                  name="action"
+                  value="generate"
                   className="group relative size-8 p-0 disabled:bg-transparent disabled:text-white"
                 >
                   <ArrowIcon className="size-8 group-disabled:hidden" />
@@ -98,7 +116,9 @@ export default function Home() {
               </Select>
               <Button
                 variant="outline"
-                type="button"
+                type="submit"
+                name="action"
+                value="enhance"
                 className="inline-flex items-center gap-1 whitespace-nowrap px-3 text-sm shadow-sm shadow-black"
               >
                 <SparklesIcon className="size-4" />
@@ -121,7 +141,7 @@ export default function Home() {
             </p>
           </div>
         ) : (
-          <div className="mt-12 grid w-full max-w-7xl gap-8 md:grid-cols-2">
+          <div className="mt-12 grid w-full max-w-5xl gap-8 md:grid-cols-2">
             {images.map((image, i) => (
               <div key={image.url}>
                 <Image
