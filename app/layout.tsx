@@ -27,7 +27,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} dark h-full bg-[length:6px] font-mono text-gray-100 antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} dark h-full min-h-full bg-[length:6px] font-mono text-gray-100 antialiased`}
         style={{ backgroundImage: `url(${bgPattern.src}` }}
       >
         {children}
