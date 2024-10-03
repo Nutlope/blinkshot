@@ -15,13 +15,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import imagePlaceholder from "@/public/image-placeholder.png";
 import Image from "next/image";
 import { FormEvent, useState } from "react";
 
 let models = [
-  { label: "Flux 1.1 Pro", value: "black-forest-labs/FLUX.1.1-pro" },
-  { label: "Flux Schnell", value: "black-forest-labs/FLUX.1-schnell" },
+  {
+    label: "Flux 1.1 Pro",
+    description: "slow, high quality",
+    value: "black-forest-labs/FLUX.1.1-pro",
+  },
+  {
+    label: "Flux Schnell",
+    description: "fast, low quality",
+    value: "black-forest-labs/FLUX.1-schnell",
+  },
 ];
 
 export default function Home() {
@@ -69,18 +78,19 @@ export default function Home() {
       </header>
 
       <div className="flex justify-center">
-        <form onSubmit={handleSubmit} className="mt-10 w-full max-w-md">
+        <form onSubmit={handleSubmit} className="mt-10 w-full max-w-lg">
           <fieldset disabled={isLoading}>
             <div className="relative">
-              <Input
+              <Textarea
+                rows={4}
                 spellCheck={false}
                 placeholder="Describe your image..."
                 required
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                className="h-12 border-gray-300 border-opacity-50 bg-gray-400 pl-4 pr-16 placeholder-gray-300 lg:h-14 lg:pl-4 lg:text-base"
+                className="w-full resize-none border-gray-300 border-opacity-50 bg-gray-400 pl-4 pr-16 placeholder-gray-300"
               />
-              <div className="absolute right-2 top-0 flex h-full items-center justify-center lg:right-4">
+              <div className="absolute right-2 top-6 flex h-full items-center justify-center lg:right-2">
                 <Button
                   type="submit"
                   name="action"
@@ -109,7 +119,10 @@ export default function Home() {
                 <SelectContent>
                   {models.map((model) => (
                     <SelectItem key={model.value} value={model.value}>
-                      {model.label}
+                      {model.label}{" "}
+                      <span className="tracking-tighter text-gray-300">
+                        ({model.description})
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -131,8 +144,8 @@ export default function Home() {
 
       <div className="flex w-full grow flex-col items-center justify-center pb-8 pt-4 text-center">
         {images.length === 0 ? (
-          <div className="max-w-xl lg:max-w-3xl">
-            <p className="text-xl font-semibold text-gray-200 md:text-3xl lg:text-5xl">
+          <div className="max-w-xl md:max-w-4xl lg:max-w-3xl">
+            <p className="text-xl font-semibold text-gray-200 md:text-3xl lg:text-4xl">
               Generate images in seconds
             </p>
             <p className="mt-4 text-balance text-sm text-gray-300 md:text-base lg:text-lg">
