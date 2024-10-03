@@ -6,12 +6,12 @@ import bgPattern from "@/public/bg-pattern-transparent.png";
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
   variable: "--font-geist-sans",
-  weight: "100 900",
+  // weight: "100 900",
 });
 const geistMono = localFont({
   src: "./fonts/GeistMonoVF.woff",
   variable: "--font-geist-mono",
-  weight: "100 900",
+  // weight: "100 500 900",
 });
 
 export const metadata: Metadata = {
