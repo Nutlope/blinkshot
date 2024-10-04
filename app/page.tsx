@@ -5,6 +5,7 @@ import XIcon from "@/components/icons/x-icon";
 import Logo from "@/components/logo";
 import Spinner from "@/components/spinner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import imagePlaceholder from "@/public/image-placeholder.png";
 import { useQuery } from "@tanstack/react-query";
@@ -14,6 +15,7 @@ import { useState } from "react";
 
 export default function Home() {
   const [prompt, setPrompt] = useState("");
+  const [userAPIKey, setUserAPIKey] = useState("");
   const debouncedPrompt = useDebounce(prompt, 300);
 
   const { data: image, isFetching } = useQuery({
@@ -45,10 +47,18 @@ export default function Home() {
 
   return (
     <div className="flex h-full flex-col px-5">
-      <header className="flex justify-center pt-6">
+      <header className="flex justify-between pt-6">
+        <div></div>
         <a href="https://www.dub.sh/together-ai" target="_blank">
           <Logo />
         </a>
+        <div>
+          <Input
+            placeholder="API Key"
+            value={userAPIKey}
+            onChange={(e) => setUserAPIKey(e.target.value)}
+          />
+        </div>
       </header>
 
       <div className="flex justify-center">
