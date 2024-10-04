@@ -21,10 +21,6 @@
 2. Create a `.env.local` file and add your [Together AI API key](https://www.dub.sh/together-ai): `TOGETHER_API_KEY=`
 3. Run `npm install` and `npm run dev` to install dependencies and run locally
 
-# TODOs
-
-- [ ] Add rate limiting by IP w/ a credit system that resets every 24h
-
 ## Future Tasks
 
 - [ ] Add a CTA to fork the code on GithUb

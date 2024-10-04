@@ -14,10 +14,10 @@ if (process.env.HELICONE_API_KEY) {
     "Helicone-Auth": `Bearer ${process.env.HELICONE_API_KEY}`,
   };
 }
-if (!process.env.UPSTASH_REDIS_REST_URL) {
-  // Create a new ratelimiter, that allows 5 requests per 10 seconds
+if (process.env.UPSTASH_REDIS_REST_URL) {
   ratelimit = new Ratelimit({
     redis: Redis.fromEnv(),
+    // Allow 40 requests per day
     limiter: Ratelimit.fixedWindow(5, "1440 m"),
     analytics: true,
     prefix: "blinkshot",
