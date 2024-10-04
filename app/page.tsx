@@ -14,7 +14,7 @@ import { useState } from "react";
 
 export default function Home() {
   const [prompt, setPrompt] = useState("");
-  const debouncedPrompt = useDebounce(prompt, 250);
+  const debouncedPrompt = useDebounce(prompt, 300);
 
   const { data: image, isFetching } = useQuery({
     placeholderData: (previousData) => previousData,
@@ -27,13 +27,18 @@ export default function Home() {
         },
         body: JSON.stringify({ prompt }),
       });
+
+      if (!res.ok) {
+        throw new Error(await res.text());
+      }
       return (await res.json()) as {
         b64_json: string;
         timings: { inference: number };
       };
     },
-    enabled: !!prompt.trim(),
+    enabled: !!debouncedPrompt.trim(),
     staleTime: Infinity,
+    retry: false,
   });
 
   let isDebouncing = prompt !== debouncedPrompt;
@@ -60,7 +65,7 @@ export default function Home() {
                 className="w-full resize-none border-gray-300 border-opacity-50 bg-gray-400 px-4 placeholder-gray-300"
               />
               <div
-                className={`${isFetching || isDebouncing ? "flex" : "hidden"} absolute right-4 top-6 h-full items-center justify-center lg:right-2`}
+                className={`${isFetching || isDebouncing ? "flex" : "hidden"} absolute bottom-3 right-3 items-center justify-center`}
               >
                 <Spinner className="size-4" />
               </div>
