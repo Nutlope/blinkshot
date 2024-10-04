@@ -30,3 +30,5 @@ export async function POST(req: Request) {
     prompt: response.choices[0].message?.content ?? prompt,
   });
 }
+
+export const runtime = "edge";
