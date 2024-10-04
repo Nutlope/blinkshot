@@ -14,15 +14,15 @@ if (process.env.HELICONE_API_KEY) {
     "Helicone-Auth": `Bearer ${process.env.HELICONE_API_KEY}`,
   };
 }
-// if (process.env.UPSTASH_REDIS_REST_URL) {
-//   ratelimit = new Ratelimit({
-//     redis: Redis.fromEnv(),
-//     // Allow 30 requests per day
-//     limiter: Ratelimit.fixedWindow(30, "1440 m"),
-//     analytics: true,
-//     prefix: "blinkshot",
-//   });
-// }
+if (process.env.UPSTASH_REDIS_REST_URL) {
+  ratelimit = new Ratelimit({
+    redis: Redis.fromEnv(),
+    // Allow 30 requests per day
+    limiter: Ratelimit.fixedWindow(30, "1440 m"),
+    analytics: true,
+    prefix: "blinkshot",
+  });
+}
 
 const client = new Together(options);
 
