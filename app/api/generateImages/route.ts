@@ -5,26 +5,27 @@ const client = new Together();
 
 export async function POST(req: Request) {
   let json = await req.json();
-  let { model, prompt } = z
+  let { prompt } = z
     .object({
-      model: z.string(),
       prompt: z.string(),
     })
     .parse(json);
 
-  let responses = await Promise.all(
-    Array.from(Array(4).keys()).map(() =>
-      client.images.create({
-        prompt,
-        model,
-        n: 1,
-        width: 1024,
-        height: 768,
-        // @ts-expect-error - this is not typed in the API
-        response_format: "base64",
-      }),
-    ),
-  );
+  const startTime = Date.now();
 
-  return Response.json(responses.map((r) => r.data[0]));
+  let response = await client.images.create({
+    prompt,
+    model: "black-forest-labs/FLUX.1-schnell",
+    n: 1,
+    steps: 3,
+    width: 1024,
+    height: 768,
+    // @ts-expect-error - this is not typed in the API
+    response_format: "base64",
+  });
+
+  const endTime = Date.now();
+  console.log(`Time taken: ${endTime - startTime} ms`);
+
+  return Response.json([response.data[0]]);
 }

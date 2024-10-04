@@ -27,10 +27,11 @@
 
 ## Future Tasks
 
-- [ ] Fix the enhance prompt thing
+- [ ] Clean up code to make it just realtime
 - [ ] Add links to the footer
-- [ ] Add realtime mode, where you get one image and it can change as you type
 - [ ] On hover, have a download button
+- [ ] Add a description of the appto the footer
+
 - [ ] Let people play around with resolutions
 - [ ] Add themes
 
