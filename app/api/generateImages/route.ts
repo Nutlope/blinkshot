@@ -17,8 +17,8 @@ if (process.env.HELICONE_API_KEY) {
 if (process.env.UPSTASH_REDIS_REST_URL) {
   ratelimit = new Ratelimit({
     redis: Redis.fromEnv(),
-    // Allow 60 requests per day
-    limiter: Ratelimit.fixedWindow(60, "1440 m"),
+    // Allow 30 requests per day
+    limiter: Ratelimit.fixedWindow(30, "1440 m"),
     analytics: true,
     prefix: "blinkshot",
   });
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
       model: "black-forest-labs/FLUX.1-schnell",
       width: 1024,
       height: 768,
-      steps: 4,
+      steps: 3,
       // @ts-expect-error - this is not typed in the API
       response_format: "base64",
     });
