@@ -1,4 +1,3 @@
-// middleware.js
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 
@@ -16,6 +15,7 @@ function getIPAddress() {
 export async function middleware(req: Request) {
   const ip = getIPAddress();
 
+  // Temporarily blocking traffic from Russia since I have too many requests from there.
   const location = await fetch(
     `http://api.ipstack.com/${ip}?access_key=${process.env.IPSTACK_API_KEY}`,
   ).then((res) => res.json());
