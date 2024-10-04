@@ -27,5 +27,5 @@ export async function POST(req: Request) {
   const endTime = Date.now();
   console.log(`Time taken: ${endTime - startTime} ms`);
 
-  return Response.json([response.data[0]]);
+  return Response.json(response.data[0]);
 }

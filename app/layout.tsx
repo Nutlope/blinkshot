@@ -1,9 +1,9 @@
+import Providers from "@/app/providers";
+import bgPattern from "@/public/bg-pattern-transparent.png";
 import type { Metadata } from "next";
+import PlausibleProvider from "next-plausible";
 import localFont from "next/font/local";
 import "./globals.css";
-import bgPattern from "@/public/bg-pattern-transparent.png";
-import PlausibleProvider from "next-plausible";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -44,8 +44,6 @@ export const metadata: Metadata = {
   },
 };
 
-const queryClient = new QueryClient();
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -60,9 +58,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} dark h-full min-h-full bg-[length:6px] font-mono text-gray-100 antialiased`}
         style={{ backgroundImage: `url(${bgPattern.src}` }}
       >
-        <QueryClientProvider client={queryClient}>
-          {children}
-        </QueryClientProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

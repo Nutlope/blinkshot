@@ -8,22 +8,19 @@ import Spinner from "@/components/spinner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import imagePlaceholder from "@/public/image-placeholder.png";
+import { useQuery } from "@tanstack/react-query";
+import { useDebounce } from "@uidotdev/usehooks";
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 export default function Home() {
-  const [isLoading, setIsLoading] = useState(false);
   const [prompt, setPrompt] = useState("");
-  const [images, setImages] = useState<
-    { b64_json: string; timings: { inference: number } }[]
-  >([]);
+  const debouncedPrompt = useDebounce(prompt, 200);
 
-  // Function to generate images
-  async function generateImages() {
-    if (!prompt.trim()) return;
-    setIsLoading(true);
-
-    try {
+  const { data: image, isFetching } = useQuery({
+    placeholderData: (previousData) => previousData,
+    queryKey: [debouncedPrompt],
+    queryFn: async () => {
       let res = await fetch("/api/generateImages", {
         method: "POST",
         headers: {
@@ -31,26 +28,14 @@ export default function Home() {
         },
         body: JSON.stringify({ prompt }),
       });
-      let json = await res.json();
-
-      setImages(json);
-    } catch (error) {
-      console.error("Error generating images:", error);
-    }
-
-    setIsLoading(false);
-  }
-
-  // Debounce generateImages when prompt changes
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      generateImages();
-    }, 200);
-
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [prompt]);
+      return (await res.json()) as {
+        b64_json: string;
+        timings: { inference: number };
+      };
+    },
+    enabled: !!prompt.trim(),
+    staleTime: Infinity,
+  });
 
   return (
     <div className="flex h-full flex-col px-5">
@@ -93,7 +78,7 @@ export default function Home() {
       </div>
 
       <div className="flex w-full grow flex-col items-center justify-center pb-8 pt-4 text-center">
-        {images.length === 0 ? (
+        {!image ? (
           <div className="max-w-xl md:max-w-4xl lg:max-w-3xl">
             <p className="text-xl font-semibold text-gray-200 md:text-3xl lg:text-4xl">
               Generate images in real-time
@@ -105,23 +90,17 @@ export default function Home() {
           </div>
         ) : (
           <div className="mt-12 flex w-full max-w-4xl justify-center gap-8">
-            {images.map((image, i) => (
-              <div key={image.b64_json}>
-                <Image
-                  placeholder="blur"
-                  blurDataURL={imagePlaceholder.blurDataURL}
-                  width={1024}
-                  height={768}
-                  src={`data:image/png;base64,${image.b64_json}`}
-                  alt=""
-                  className={`${isLoading ? "animate-pulse" : ""} max-w-full rounded-lg object-cover shadow-sm shadow-black`}
-                  style={{
-                    animationDelay: `${i * 75}ms`,
-                  }}
-                />
-                <div>{image.timings.inference}ms</div>
-              </div>
-            ))}
+            <div>
+              <Image
+                placeholder="blur"
+                blurDataURL={imagePlaceholder.blurDataURL}
+                width={1024}
+                height={768}
+                src={`data:image/png;base64,${image.b64_json}`}
+                alt=""
+                className={`${isFetching ? "animate-pulse" : ""} max-w-full rounded-lg object-cover shadow-sm shadow-black`}
+              />
+            </div>
           </div>
         )}
       </div>
