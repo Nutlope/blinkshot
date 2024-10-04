@@ -14,7 +14,7 @@ import { useState } from "react";
 
 export default function Home() {
   const [prompt, setPrompt] = useState("");
-  const debouncedPrompt = useDebounce(prompt, 200);
+  const debouncedPrompt = useDebounce(prompt, 300);
 
   const { data: image, isFetching } = useQuery({
     placeholderData: (previousData) => previousData,
