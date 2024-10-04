@@ -4,21 +4,24 @@ import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { headers } from "next/headers";
 
-// Create a new ratelimiter, that allows 5 requests per 10 seconds
-const ratelimit = new Ratelimit({
-  redis: Redis.fromEnv(),
-  limiter: Ratelimit.fixedWindow(5, "1440 m"),
-  analytics: true,
-  prefix: "blinkshot",
-});
-
 let options: ConstructorParameters<typeof Together>[0] = {};
+let ratelimit: Ratelimit | undefined;
 
+// Observability and rate limiting, if the API keys are set. If not, it skips.
 if (process.env.HELICONE_API_KEY) {
   options.baseURL = "https://together.helicone.ai/v1";
   options.defaultHeaders = {
     "Helicone-Auth": `Bearer ${process.env.HELICONE_API_KEY}`,
   };
+}
+if (!process.env.UPSTASH_REDIS_REST_URL) {
+  // Create a new ratelimiter, that allows 5 requests per 10 seconds
+  ratelimit = new Ratelimit({
+    redis: Redis.fromEnv(),
+    limiter: Ratelimit.fixedWindow(5, "1440 m"),
+    analytics: true,
+    prefix: "blinkshot",
+  });
 }
 
 const client = new Together(options);
@@ -31,17 +34,17 @@ export async function POST(req: Request) {
     })
     .parse(json);
 
-  const identifier = getIPAddress();
-  console.log(identifier);
-  const { success } = await ratelimit.limit(identifier);
-
-  if (!success) {
-    return Response.json(
-      "You have no requests left, please try again in 24h.",
-      {
-        status: 429,
-      },
-    );
+  if (ratelimit) {
+    const identifier = getIPAddress();
+    const { success } = await ratelimit.limit(identifier);
+    if (!success) {
+      return Response.json(
+        "You have no requests left, please try again in 24h.",
+        {
+          status: 429,
+        },
+      );
+    }
   }
 
   let response;
