@@ -1,6 +1,5 @@
 "use client";
 
-import ArrowIcon from "@/components/icons/arrow-icon";
 import GithubIcon from "@/components/icons/github-icon";
 import XIcon from "@/components/icons/x-icon";
 import Logo from "@/components/logo";
@@ -15,7 +14,7 @@ import { useState } from "react";
 
 export default function Home() {
   const [prompt, setPrompt] = useState("");
-  const debouncedPrompt = useDebounce(prompt, 200);
+  const debouncedPrompt = useDebounce(prompt, 250);
 
   const { data: image, isFetching } = useQuery({
     placeholderData: (previousData) => previousData,
@@ -36,6 +35,8 @@ export default function Home() {
     enabled: !!prompt.trim(),
     staleTime: Infinity,
   });
+
+  let isDebouncing = prompt !== debouncedPrompt;
 
   return (
     <div className="flex h-full flex-col px-5">
@@ -58,19 +59,10 @@ export default function Home() {
                 onChange={(e) => setPrompt(e.target.value)}
                 className="w-full resize-none border-gray-300 border-opacity-50 bg-gray-400 pl-4 pr-16 placeholder-gray-300"
               />
-              <div className="absolute right-2 top-6 flex h-full items-center justify-center lg:right-2">
-                <Button
-                  type="submit"
-                  name="action"
-                  value="generate"
-                  className="group relative size-8 p-0 disabled:bg-transparent disabled:text-white"
-                >
-                  <ArrowIcon className="size-8 group-disabled:hidden" />
-
-                  <div className="absolute inset-0 hidden items-center justify-center group-disabled:flex">
-                    <Spinner className="size-4" />
-                  </div>
-                </Button>
+              <div
+                className={`${isFetching || isDebouncing ? "flex" : "hidden"} absolute right-4 top-6 h-full items-center justify-center lg:right-2`}
+              >
+                <Spinner className="size-4" />
               </div>
             </div>
           </fieldset>
