@@ -27,7 +27,6 @@
 
 ## Future Tasks
 
-- [ ] Clean up code to make it just realtime
 - [ ] Add links to the footer
 - [ ] On hover, have a download button
 - [ ] Add a description of the appto the footer
