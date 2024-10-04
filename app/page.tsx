@@ -88,6 +88,20 @@ export default function Home() {
         ) : (
           <div className="mt-4 flex w-full max-w-4xl justify-center">
             <div>
+              <div className="relative group ">
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100 backdrop-blur-sm ">
+                  <button
+                    onClick={() => {
+                      const link = document.createElement('a');
+                      link.href = `data:image/png;base64,${image.b64_json}`;
+                      link.download = 'generated-image.png';
+                      link.click();
+                    }}
+                    className="bg-black bg-opacity-50 text-white px-4 py-2 rounded-md hover:bg-opacity-70 transition-colors duration-300"
+                  >
+                    Download Image
+                  </button>
+                </div>
               <Image
                 placeholder="blur"
                 blurDataURL={imagePlaceholder.blurDataURL}
@@ -97,6 +111,7 @@ export default function Home() {
                 alt=""
                 className={`${isFetching ? "animate-pulse" : ""} max-w-full rounded-lg object-cover shadow-sm shadow-black`}
               />
+              </div>
             </div>
           </div>
         )}
