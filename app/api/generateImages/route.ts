@@ -14,15 +14,15 @@ if (process.env.HELICONE_API_KEY) {
     "Helicone-Auth": `Bearer ${process.env.HELICONE_API_KEY}`,
   };
 }
-if (process.env.UPSTASH_REDIS_REST_URL) {
-  ratelimit = new Ratelimit({
-    redis: Redis.fromEnv(),
-    // Allow 30 requests per day
-    limiter: Ratelimit.fixedWindow(30, "1440 m"),
-    analytics: true,
-    prefix: "blinkshot",
-  });
-}
+// if (process.env.UPSTASH_REDIS_REST_URL) {
+//   ratelimit = new Ratelimit({
+//     redis: Redis.fromEnv(),
+//     // Allow 30 requests per day
+//     limiter: Ratelimit.fixedWindow(30, "1440 m"),
+//     analytics: true,
+//     prefix: "blinkshot",
+//   });
+// }
 
 const client = new Together(options);
 
@@ -36,6 +36,18 @@ export async function POST(req: Request) {
 
   if (ratelimit) {
     const identifier = getIPAddress();
+
+    // Temporarily blocking traffic from Russia since I have too many requests from there.
+    const location = await fetch(
+      `http://api.ipstack.com/${identifier}?access_key=${process.env.IPSTACK_API_KEY}`,
+    ).then((res) => res.json());
+
+    if (location.country_code === "RU") {
+      return Response.json("No requests allowed.", {
+        status: 403,
+      });
+    }
+
     const { success } = await ratelimit.limit(identifier);
     if (!success) {
       return Response.json(
