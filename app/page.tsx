@@ -5,6 +5,7 @@ import XIcon from "@/components/icons/x-icon";
 import Logo from "@/components/logo";
 import Spinner from "@/components/spinner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import imagePlaceholder from "@/public/image-placeholder.png";
 import { useQuery } from "@tanstack/react-query";
@@ -14,6 +15,7 @@ import { useState } from "react";
 
 export default function Home() {
   const [prompt, setPrompt] = useState("");
+  const [userAPIKey, setUserAPIKey] = useState("");
   const debouncedPrompt = useDebounce(prompt, 300);
 
   const { data: image, isFetching } = useQuery({
@@ -25,7 +27,7 @@ export default function Home() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, userAPIKey }),
       });
 
       if (!res.ok) {
@@ -45,10 +47,31 @@ export default function Home() {
 
   return (
     <div className="flex h-full flex-col px-5">
-      <header className="flex justify-center pt-6">
-        <a href="https://www.dub.sh/together-ai" target="_blank">
-          <Logo />
-        </a>
+      <header className="flex justify-center pt-20 md:justify-end md:pt-3">
+        <div className="absolute left-1/2 top-6 -translate-x-1/2">
+          <a href="https://www.dub.sh/together-ai" target="_blank">
+            <Logo />
+          </a>
+        </div>
+        <div>
+          <label className="text-xs text-gray-200">
+            [Optional] Add your{" "}
+            <a
+              href="https://api.together.xyz/settings/api-keys"
+              target="_blank"
+              className="underline underline-offset-4 transition hover:text-blue-500"
+            >
+              Together API Key
+            </a>{" "}
+          </label>
+          <Input
+            placeholder="API Key"
+            type="password"
+            value={userAPIKey}
+            className="mt-1 bg-gray-400 text-gray-200 placeholder:text-gray-300"
+            onChange={(e) => setUserAPIKey(e.target.value)}
+          />
+        </div>
       </header>
 
       <div className="flex justify-center">
@@ -62,7 +85,7 @@ export default function Home() {
                 required
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                className="w-full resize-none border-gray-300 border-opacity-50 bg-gray-400 px-4 placeholder-gray-300"
+                className="w-full resize-none border-gray-300 border-opacity-50 bg-gray-400 px-4 text-base placeholder-gray-300"
               />
               <div
                 className={`${isFetching || isDebouncing ? "flex" : "hidden"} absolute bottom-3 right-3 items-center justify-center`}

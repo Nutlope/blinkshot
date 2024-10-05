@@ -28,13 +28,18 @@ const client = new Together(options);
 
 export async function POST(req: Request) {
   let json = await req.json();
-  let { prompt } = z
+  let { prompt, userAPIKey } = z
     .object({
       prompt: z.string(),
+      userAPIKey: z.string().optional(),
     })
     .parse(json);
 
-  if (ratelimit) {
+  if (userAPIKey) {
+    client.apiKey = userAPIKey;
+  }
+
+  if (ratelimit && !userAPIKey) {
     const identifier = getIPAddress();
 
     // Temporarily blocking traffic from Russia since I have too many requests from there.
@@ -51,7 +56,7 @@ export async function POST(req: Request) {
     const { success } = await ratelimit.limit(identifier);
     if (!success) {
       return Response.json(
-        "You have no requests left, please try again in 24h.",
+        "No requests left. Please add your own API key or try again in 24h.",
         {
           status: 429,
         },
