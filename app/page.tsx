@@ -27,7 +27,7 @@ export default function Home() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, userAPIKey }),
       });
 
       if (!res.ok) {
@@ -49,15 +49,24 @@ export default function Home() {
     <div className="flex h-full flex-col px-5">
       <header className="flex justify-between pt-6">
         <div></div>
-        <a href="https://www.dub.sh/together-ai" target="_blank">
-          <Logo />
-        </a>
+        <div className="flex justify-center">
+          <a href="https://www.dub.sh/together-ai" target="_blank">
+            <Logo />
+          </a>
+        </div>
         <div>
-          <Input
-            placeholder="API Key"
-            value={userAPIKey}
-            onChange={(e) => setUserAPIKey(e.target.value)}
-          />
+          <div>
+            <label className="text-xs text-gray-200">
+              Add your Together API Key
+            </label>
+            <Input
+              placeholder="API Key"
+              type="password"
+              value={userAPIKey}
+              className="bg-gray-400 text-gray-200 placeholder:text-gray-300"
+              onChange={(e) => setUserAPIKey(e.target.value)}
+            />
+          </div>
         </div>
       </header>
 
