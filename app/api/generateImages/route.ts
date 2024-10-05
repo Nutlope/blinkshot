@@ -56,7 +56,7 @@ export async function POST(req: Request) {
     const { success } = await ratelimit.limit(identifier);
     if (!success) {
       return Response.json(
-        "You have no requests left, please try again in 24h.",
+        "No requests left. Please add your own API key or try again in 24h.",
         {
           status: 429,
         },

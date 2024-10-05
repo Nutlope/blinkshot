@@ -47,26 +47,30 @@ export default function Home() {
 
   return (
     <div className="flex h-full flex-col px-5">
-      <header className="flex justify-between pt-6">
-        <div></div>
-        <div className="flex justify-center">
+      <header className="flex justify-center pt-20 md:justify-end md:pt-3">
+        <div className="absolute left-1/2 top-6 -translate-x-1/2">
           <a href="https://www.dub.sh/together-ai" target="_blank">
             <Logo />
           </a>
         </div>
         <div>
-          <div>
-            <label className="text-xs text-gray-200">
-              Add your Together API Key
-            </label>
-            <Input
-              placeholder="API Key"
-              type="password"
-              value={userAPIKey}
-              className="bg-gray-400 text-gray-200 placeholder:text-gray-300"
-              onChange={(e) => setUserAPIKey(e.target.value)}
-            />
-          </div>
+          <label className="text-xs text-gray-200">
+            [Optional] Add your{" "}
+            <a
+              href="https://api.together.xyz/settings/api-keys"
+              target="_blank"
+              className="underline underline-offset-4 transition hover:text-blue-500"
+            >
+              Together API Key
+            </a>{" "}
+          </label>
+          <Input
+            placeholder="API Key"
+            type="password"
+            value={userAPIKey}
+            className="mt-1 bg-gray-400 text-gray-200 placeholder:text-gray-300"
+            onChange={(e) => setUserAPIKey(e.target.value)}
+          />
         </div>
       </header>
 
@@ -81,7 +85,7 @@ export default function Home() {
                 required
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                className="w-full resize-none border-gray-300 border-opacity-50 bg-gray-400 px-4 placeholder-gray-300"
+                className="w-full resize-none border-gray-300 border-opacity-50 bg-gray-400 px-4 text-base placeholder-gray-300"
               />
               <div
                 className={`${isFetching || isDebouncing ? "flex" : "hidden"} absolute bottom-3 right-3 items-center justify-center`}
