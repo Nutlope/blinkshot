@@ -18,7 +18,7 @@ if (process.env.UPSTASH_REDIS_REST_URL) {
   ratelimit = new Ratelimit({
     redis: Redis.fromEnv(),
     // Allow 40 requests per day
-    limiter: Ratelimit.fixedWindow(40, "1440 m"),
+    limiter: Ratelimit.fixedWindow(60, "1440 m"),
     analytics: true,
     prefix: "blinkshot",
   });
