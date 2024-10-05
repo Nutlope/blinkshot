@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 
@@ -12,7 +13,11 @@ function getIPAddress() {
   return headers().get("x-real-ip") ?? FALLBACK_IP_ADDRESS;
 }
 
-export async function middleware(req: Request) {
+export async function middleware(_req: Request) {
+  if (!process.env.IPSTACK_API_KEY) {
+    return NextResponse.next();
+  }
+
   const ip = getIPAddress();
 
   // Temporarily blocking traffic from Russia since I have too many requests from there.
