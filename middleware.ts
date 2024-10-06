@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
-import geoip from "geoip-lite";
+import geoip from "fast-geoip";
 
 function getIPAddress() {
   const FALLBACK_IP_ADDRESS = "0.0.0.0";
@@ -18,7 +18,7 @@ export async function middleware(_req: Request) {
   const ip = getIPAddress();
 
   // Temporarily blocking traffic from Russia since I have too many requests from there.
-  let geo = geoip.lookup(ip);
+  let geo = await geoip.lookup(ip);
   let country = geo?.country;
   console.log(country);
   if (country === "RU") {
