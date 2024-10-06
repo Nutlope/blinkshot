@@ -15,10 +15,6 @@ function getIPAddress() {
 }
 
 export async function middleware(_req: Request) {
-  if (!process.env.IPSTACK_API_KEY) {
-    return NextResponse.next();
-  }
-
   const ip = getIPAddress();
 
   // Temporarily blocking traffic from Russia since I have too many requests from there.
