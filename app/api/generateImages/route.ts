@@ -17,8 +17,8 @@ if (process.env.HELICONE_API_KEY) {
 if (process.env.UPSTASH_REDIS_REST_URL) {
   ratelimit = new Ratelimit({
     redis: Redis.fromEnv(),
-    // Allow 40 requests per day
-    limiter: Ratelimit.fixedWindow(60, "1440 m"),
+    // Allow 100 requests per day (~5-10 prompts)
+    limiter: Ratelimit.fixedWindow(100, "1440 m"),
     analytics: true,
     prefix: "blinkshot",
   });
