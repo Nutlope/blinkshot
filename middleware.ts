@@ -25,8 +25,6 @@ export async function middleware(_req: Request) {
     `http://api.ipstack.com/${ip}?access_key=${process.env.IPSTACK_API_KEY}`,
   ).then((res) => res.json());
 
-  console.log(location.country_code);
-
   if (location.country_code === "RU") {
     return new NextResponse("Access Denied", { status: 403 });
   }

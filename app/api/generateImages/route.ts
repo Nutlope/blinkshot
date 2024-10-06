@@ -4,16 +4,9 @@ import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { headers } from "next/headers";
 
-let options: ConstructorParameters<typeof Together>[0] = {};
 let ratelimit: Ratelimit | undefined;
 
-// Observability and rate limiting, if the API keys are set. If not, it skips.
-if (process.env.HELICONE_API_KEY) {
-  options.baseURL = "https://together.helicone.ai/v1";
-  options.defaultHeaders = {
-    "Helicone-Auth": `Bearer ${process.env.HELICONE_API_KEY}`,
-  };
-}
+// Add rate limiting if Upstash API keys are set, otherwise skip
 if (process.env.UPSTASH_REDIS_REST_URL) {
   ratelimit = new Ratelimit({
     redis: Redis.fromEnv(),
@@ -24,8 +17,6 @@ if (process.env.UPSTASH_REDIS_REST_URL) {
   });
 }
 
-const client = new Together(options);
-
 export async function POST(req: Request) {
   let json = await req.json();
   let { prompt, userAPIKey } = z
@@ -34,6 +25,18 @@ export async function POST(req: Request) {
       userAPIKey: z.string().optional(),
     })
     .parse(json);
+
+  // Add observability if a Helicone key is specified, otherwise skip
+  let options: ConstructorParameters<typeof Together>[0] = {};
+  if (process.env.HELICONE_API_KEY) {
+    options.baseURL = "https://together.helicone.ai/v1";
+    options.defaultHeaders = {
+      "Helicone-Auth": `Bearer ${process.env.HELICONE_API_KEY}`,
+      "Helicone-Property-BYOK": userAPIKey ? "true" : "false",
+    };
+  }
+
+  const client = new Together(options);
 
   if (userAPIKey) {
     client.apiKey = userAPIKey;
