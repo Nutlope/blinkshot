@@ -14,13 +14,16 @@ function getIPAddress() {
   return headers().get("x-real-ip") ?? FALLBACK_IP_ADDRESS;
 }
 
-export async function middleware(_req: Request) {
+export async function middleware(req: Request) {
   const ip = getIPAddress();
 
+  let headersList = headers();
+  console.log({ headersList });
+
+  let country = headersList.get("x-country");
+  console.log({ country });
+
   // Temporarily blocking traffic from Russia since I have too many requests from there.
-  let geo = await geoip.lookup(ip);
-  let country = geo?.country;
-  console.log(country);
   if (country === "RU") {
     return new NextResponse("Access Denied", { status: 403 });
   }
