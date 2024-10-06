@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
+import geoip from "geoip-lite";
 
 function getIPAddress() {
   const FALLBACK_IP_ADDRESS = "0.0.0.0";
@@ -21,11 +22,10 @@ export async function middleware(_req: Request) {
   const ip = getIPAddress();
 
   // Temporarily blocking traffic from Russia since I have too many requests from there.
-  const location = await fetch(
-    `http://api.ipstack.com/${ip}?access_key=${process.env.IPSTACK_API_KEY}`,
-  ).then((res) => res.json());
-
-  if (location.country_code === "RU") {
+  let geo = geoip.lookup(ip);
+  let country = geo?.country;
+  console.log(country);
+  if (country === "RU") {
     return new NextResponse("Access Denied", { status: 403 });
   }
 
