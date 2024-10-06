@@ -1,31 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { NextResponse } from "next/server";
-import { headers } from "next/headers";
+import { NextRequest, NextResponse } from "next/server";
 
-function getIPAddress() {
-  const FALLBACK_IP_ADDRESS = "0.0.0.0";
-  const forwardedFor = headers().get("x-forwarded-for");
-
-  if (forwardedFor) {
-    return forwardedFor.split(",")[0] ?? FALLBACK_IP_ADDRESS;
-  }
-
-  return headers().get("x-real-ip") ?? FALLBACK_IP_ADDRESS;
-}
-
-export async function middleware(_req: Request) {
-  if (!process.env.IPSTACK_API_KEY) {
-    return NextResponse.next();
-  }
-
-  const ip = getIPAddress();
-
+export async function middleware(req: NextRequest) {
+  let country = req.geo?.country;
   // Temporarily blocking traffic from Russia since I have too many requests from there.
-  const location = await fetch(
-    `http://api.ipstack.com/${ip}?access_key=${process.env.IPSTACK_API_KEY}`,
-  ).then((res) => res.json());
-
-  if (location.country_code === "RU") {
+  if (country === "RU") {
     return new NextResponse("Access Denied", { status: 403 });
   }
 
