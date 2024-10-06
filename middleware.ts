@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
 import geoip from "fast-geoip";
 
@@ -14,7 +14,7 @@ function getIPAddress() {
   return headers().get("x-real-ip") ?? FALLBACK_IP_ADDRESS;
 }
 
-export async function middleware(req: Request) {
+export async function middleware(req: NextRequest) {
   const ip = getIPAddress();
 
   let headersList = headers();
@@ -23,6 +23,7 @@ export async function middleware(req: Request) {
   let country = headersList.get("x-country");
   console.log({ country });
 
+  console.log("Geo REQ", req.geo);
   // Temporarily blocking traffic from Russia since I have too many requests from there.
   if (country === "RU") {
     return new NextResponse("Access Denied", { status: 403 });
