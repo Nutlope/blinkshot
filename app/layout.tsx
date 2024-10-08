@@ -52,6 +52,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full">
       <head>
+        <meta name="color-scheme" content="dark" />
         <PlausibleProvider domain="blinkshot.io" />
       </head>
       <body
