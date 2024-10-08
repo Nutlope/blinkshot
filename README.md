@@ -23,9 +23,9 @@
 
 ## Future Tasks
 
-- [ ] Add a CTA to fork the code on GithUb
-- [ ] On hover, have a download button
-- [ ] Let people play around with resolutions
-- [ ] Let people play around with steps
-- [ ] Add a description of the app to the footer
-- [ ] Add themes
+- [ ] Show a download button so people can get their images
+- [ ] Add auth and rate limit by email instead of IP
+- [ ] Show people how many credits they have left
+- [ ] Build an image gallery of cool generations w/ their prompts
+- [ ] Add replay functionality so people can replay consistent generations
+- [ ] Add a setting to select between steps (2-5)
