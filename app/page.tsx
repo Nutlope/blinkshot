@@ -101,7 +101,7 @@ export default function Home() {
                 title="Use earlier images as references"
                 className="inline-flex items-center gap-2"
               >
-                Iterative mode
+                Consistency mode
                 <Switch
                   checked={iterativeMode}
                   onCheckedChange={setIterativeMode}
