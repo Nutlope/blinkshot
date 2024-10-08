@@ -19,9 +19,10 @@ if (process.env.UPSTASH_REDIS_REST_URL) {
 
 export async function POST(req: Request) {
   let json = await req.json();
-  let { prompt, userAPIKey } = z
+  let { prompt, userAPIKey, iterativeMode } = z
     .object({
       prompt: z.string(),
+      iterativeMode: z.boolean(),
       userAPIKey: z.string().optional(),
     })
     .parse(json);
@@ -63,6 +64,7 @@ export async function POST(req: Request) {
       model: "black-forest-labs/FLUX.1-schnell",
       width: 1024,
       height: 768,
+      seed: iterativeMode ? 123 : undefined,
       steps: 3,
       // @ts-expect-error - this is not typed in the API
       response_format: "base64",

@@ -6,6 +6,7 @@ import Logo from "@/components/logo";
 import Spinner from "@/components/spinner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import imagePlaceholder from "@/public/image-placeholder.png";
 import { useQuery } from "@tanstack/react-query";
@@ -15,6 +16,7 @@ import { useState } from "react";
 
 export default function Home() {
   const [prompt, setPrompt] = useState("");
+  const [iterativeMode, setIterativeMode] = useState(false);
   const [userAPIKey, setUserAPIKey] = useState("");
   const debouncedPrompt = useDebounce(prompt, 300);
 
@@ -27,7 +29,7 @@ export default function Home() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ prompt, userAPIKey }),
+        body: JSON.stringify({ prompt, userAPIKey, iterativeMode }),
       });
 
       if (!res.ok) {
@@ -92,6 +94,19 @@ export default function Home() {
               >
                 <Spinner className="size-4" />
               </div>
+            </div>
+
+            <div className="mt-3 text-sm md:text-right">
+              <label
+                title="Use earlier images as references"
+                className="inline-flex items-center gap-2"
+              >
+                Iterative mode
+                <Switch
+                  checked={iterativeMode}
+                  onCheckedChange={setIterativeMode}
+                />
+              </label>
             </div>
           </fieldset>
         </form>
