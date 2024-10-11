@@ -13,6 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useDebounce } from "@uidotdev/usehooks";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { DownloadIcon } from "lucide-react";
 
 type ImageResponse = {
   b64_json: string;
@@ -62,6 +63,17 @@ export default function Home() {
 
   let activeImage =
     activeIndex !== undefined ? generations[activeIndex].image : undefined;
+
+  const handleDownload = () => {
+    if (!activeImage) return;
+
+    const link = document.createElement("a");
+    link.href = `data:image/png;base64,${activeImage.b64_json}`;
+    link.download = `generated-image-${Date.now()}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="flex h-full flex-col px-5">
@@ -141,7 +153,7 @@ export default function Home() {
           </div>
         ) : (
           <div className="mt-4 flex w-full max-w-4xl flex-col justify-center">
-            <div>
+            <div className="relative">
               <Image
                 placeholder="blur"
                 blurDataURL={imagePlaceholder.blurDataURL}
@@ -151,6 +163,20 @@ export default function Home() {
                 alt=""
                 className={`${isFetching ? "animate-pulse" : ""} max-w-full rounded-lg object-cover shadow-sm shadow-black`}
               />
+            </div>
+            
+            <div className="mt-4 flex justify-between items-center">
+              <p className="text-sm text-gray-300">
+                Generation time: {activeImage.timings.inference.toFixed(2)}s
+              </p>
+              <Button
+                onClick={handleDownload}
+                className="bg-blue-600 hover:bg-blue-700 transition-colors text-white"
+                size="lg"
+              >
+                <DownloadIcon className="mr-2 h-5 w-5" />
+                Download Image
+              </Button>
             </div>
 
             <div className="mt-4 flex gap-4 overflow-x-scroll pb-4">
