@@ -17,6 +17,7 @@ import { saveAs } from "file-saver";
 import { Buffer } from 'buffer';
 import dynamic from 'next/dynamic';
 import 'react-quill/dist/quill.snow.css';
+import TTSButton from '@/components/TTSButton';
 
 const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
 
@@ -50,6 +51,11 @@ type PageProps = {
   onDeletePage: () => void;
 };
 
+type LanguageVersion = {
+  language: string;
+  pages: PageContent[];
+};
+
 export default function Home() {
   const [userAPIKey, setUserAPIKey] = useState("");
   const [iterativeMode, setIterativeMode] = useState(false);
@@ -58,13 +64,48 @@ export default function Home() {
   const [storyPrompt, setStoryPrompt] = useState("");
   const [hasStartedStory, setHasStartedStory] = useState(false);
   const [imageCount, setImageCount] = useState(1);
+  const [finalPreview, setFinalPreview] = useState<PageContent[]>([]);
+  const [languages, setLanguages] = useState<string[]>(["English"]);
+  const [activeLanguage, setActiveLanguage] = useState<string>("English");
+  const [languageVersions, setLanguageVersions] = useState<LanguageVersion[]>([
+    { language: "English", pages: [] }
+  ]);
 
-  // Function to add a new page
+  useEffect(() => {
+    return () => {
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
+  const addLanguage = (language: string) => {
+    if (!languages.includes(language)) {
+      setLanguages([...languages, language]);
+      setLanguageVersions([...languageVersions, { language, pages: [] }]);
+    }
+  };
+
+  const removeLanguage = (language: string) => {
+    if (languages.length > 1) {
+      setLanguages(languages.filter(l => l !== language));
+      setLanguageVersions(languageVersions.filter(v => v.language !== language));
+      if (activeLanguage === language) {
+        setActiveLanguage(languages[0]);
+      }
+    }
+  };
+
   const addNewPage = () => {
-    setPages((prevPages) => [
-      ...prevPages,
-      { blocks: [{ type: "text", content: "", generating: false, context: storyPrompt }] },
-    ]);
+    setLanguageVersions(prevVersions => 
+      prevVersions.map(version => ({
+        ...version,
+        pages: [
+          ...version.pages,
+          { blocks: [{ type: "text", content: "", generating: false, context: storyPrompt }] }
+        ]
+      }))
+    );
   };
 
   // Implement book download functionality
@@ -128,12 +169,20 @@ export default function Home() {
     addNewPage();
   };
 
-  const updatePageContent = (pageIndex: number, newContent: PageContent) => {
-    setPages((prevPages) => {
-      const newPages = [...prevPages];
-      newPages[pageIndex] = newContent;
-      return newPages;
-    });
+  const updatePageContent = (language: string, pageIndex: number, newContent: PageContent) => {
+    setLanguageVersions(prevVersions => 
+      prevVersions.map(version => 
+        version.language === language
+          ? {
+              ...version,
+              pages: version.pages.map((page, index) => 
+                index === pageIndex ? newContent : page
+              )
+            }
+          : version
+      )
+    );
+    updateFinalPreview(language, pageIndex, newContent);
   };
 
   const applyFormatting = (pageIndex: number, blockIndex: number, format: 'bold' | 'italic' | 'underline') => {
@@ -151,6 +200,36 @@ export default function Home() {
       }
       return newPages;
     });
+  };
+
+  // Function to convert Quill content to HTML
+  const convertDeltaToHtml = (content: string) => {
+    // This is a simple conversion. You might need a more robust solution depending on your Quill configuration
+    return content.replace(/\n/g, '<br>');
+  };
+
+  // Function to update final preview
+  const updateFinalPreview = (language: string, pageIndex: number, newContent: PageContent) => {
+    setLanguageVersions(prevVersions => 
+      prevVersions.map(version => 
+        version.language === language
+          ? {
+              ...version,
+              pages: version.pages.map((page, index) => 
+                index === pageIndex
+                  ? {
+                      blocks: page.blocks.map(block => 
+                        block.type === 'text'
+                          ? { ...block, content: convertDeltaToHtml(block.content) }
+                          : block
+                      )
+                    }
+                  : page
+              )
+            }
+          : version
+      )
+    );
   };
 
   return (
@@ -212,99 +291,162 @@ export default function Home() {
           <Button onClick={startStory}>Start Story</Button>
         </div>
       ) : (
-        <div style={{ display: "flex", height: "calc(100vh - 100px)", overflow: "hidden" }}>
-          {/* Editing Panel */}
-          <div style={{ flex: 1, overflowY: "auto", padding: "1rem", borderRight: "1px solid #d1d5db", backgroundColor: "#f9fafb" }}>
-            <div style={{ maxWidth: "600px", margin: "0 auto" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "1rem", alignItems: "center" }}>
-                <Button onClick={addNewPage}>Add New Page</Button>
-                <div style={{ display: "flex", alignItems: "center" }}>
-                  <label htmlFor="imageCount" style={{ marginRight: "0.5rem", color: "#4b5563" }}>Images per text:</label>
-                  <Input
-                    id="imageCount"
-                    type="number"
-                    min="1"
-                    max="5"
-                    value={imageCount}
-                    onChange={(e) => setImageCount(Math.max(1, Math.min(5, parseInt(e.target.value) || 1)))}
-                    style={{ width: "60px", marginRight: "0.5rem" }}
-                  />
-                </div>
-              </div>
-              {pages.map((page, index) => (
-                <Page
-                  key={index}
-                  index={index}
-                  page={page}
-                  setPageContent={(content) => {
-                    setPages((prevPages) => {
-                      const newPages = [...prevPages];
-                      newPages[index] = content;
-                      return newPages;
-                    });
-                  }}
-                  userAPIKey={userAPIKey}
-                  iterativeMode={iterativeMode}
-                  isGeneratingDocx={isGeneratingDocx}
-                  storyPrompt={storyPrompt}
-                  imageCount={imageCount}
-                  onDeletePage={() => {
-                    setPages((prevPages) => prevPages.filter((_, i) => i !== index));
-                  }}
-                />
+        <>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: "1rem" }}>
+            <select 
+              value={activeLanguage} 
+              onChange={(e) => setActiveLanguage(e.target.value)}
+              style={{ marginRight: "1rem" }}
+            >
+              {languages.map(lang => (
+                <option key={lang} value={lang}>{lang}</option>
               ))}
-            </div>
+            </select>
+            <input 
+              type="text" 
+              placeholder="Add new language"
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  addLanguage(e.currentTarget.value);
+                  e.currentTarget.value = '';
+                }
+              }}
+            />
+            <button onClick={() => removeLanguage(activeLanguage)} disabled={languages.length === 1}>
+              Remove Language
+            </button>
           </div>
 
-          {/* Book Preview with Quill */}
-          <div style={{ flex: 1, overflowY: "auto", padding: "1rem", backgroundColor: "#f3f4f6" }}>
-            <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem", color: "#1f2937", textAlign: "center" }}>Book Preview</h2>
-            <div style={{ maxWidth: "600px", margin: "0 auto", backgroundColor: "#fff", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)", borderRadius: "0.5rem", overflow: "hidden" }}>
-              {pages.map((page, pageIndex) => (
-                <div key={pageIndex} style={{ padding: "2rem", borderBottom: pageIndex < pages.length - 1 ? "1px solid #e5e7eb" : "none" }}>
-                  <h3 style={{ fontSize: "1.2rem", marginBottom: "1rem", color: "#4b5563", textAlign: "center" }}>Page {pageIndex + 1}</h3>
-                  {page.blocks.map((block, blockIndex) => (
-                    <div key={blockIndex} style={{ marginBottom: "1rem" }}>
-                      {block.type === "text" ? (
-                        <ReactQuill
-                          value={block.content}
-                          onChange={(content) => {
-                            const newPage = {...page};
-                            newPage.blocks[blockIndex].content = content;
-                            updatePageContent(pageIndex, newPage);
-                          }}
-                          modules={{
-                            toolbar: [
-                              ['bold', 'italic', 'underline'],
-                              [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                              ['clean']
-                            ]
-                          }}
-                          style={{ 
-                            height: "auto", 
-                            marginBottom: "1rem",
-                            color: "#374151",
-                            fontSize: "1rem",
-                          }}
-                        />
-                      ) : block.type === "image" && block.content ? (
-                        <div style={{ display: "flex", justifyContent: "center", marginTop: "1rem", marginBottom: "1rem" }}>
-                          <Image
-                            src={`data:image/png;base64,${block.content.b64_json}`}
-                            alt=""
-                            width={300}
-                            height={225}
-                            style={{ borderRadius: "0.25rem", maxWidth: "100%", height: "auto", boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)" }}
-                          />
-                        </div>
-                      ) : null}
-                    </div>
-                  ))}
+          <div style={{ display: "flex", height: "calc(100vh - 150px)", overflow: "hidden" }}>
+            {/* Editing Panel */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "1rem", borderRight: "1px solid #d1d5db", backgroundColor: "#f9fafb" }}>
+              <div style={{ maxWidth: "600px", margin: "0 auto" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "1rem", alignItems: "center" }}>
+                  <Button onClick={addNewPage}>Add New Page</Button>
+                  <div style={{ display: "flex", alignItems: "center" }}>
+                    <label htmlFor="imageCount" style={{ marginRight: "0.5rem", color: "#4b5563" }}>Images per text:</label>
+                    <Input
+                      id="imageCount"
+                      type="number"
+                      min="1"
+                      max="5"
+                      value={imageCount}
+                      onChange={(e) => setImageCount(Math.max(1, Math.min(5, parseInt(e.target.value) || 1)))}
+                      style={{ width: "60px", marginRight: "0.5rem" }}
+                    />
+                  </div>
                 </div>
-              ))}
+                {languageVersions.find(v => v.language === activeLanguage)?.pages.map((page, index) => (
+                  <Page
+                    key={index}
+                    index={index}
+                    page={page}
+                    setPageContent={(content) => updatePageContent(activeLanguage, index, content)}
+                    userAPIKey={userAPIKey}
+                    iterativeMode={iterativeMode}
+                    isGeneratingDocx={isGeneratingDocx}
+                    storyPrompt={storyPrompt}
+                    imageCount={imageCount}
+                    onDeletePage={() => {
+                      setLanguageVersions(prevVersions => 
+                        prevVersions.map(version => ({
+                          ...version,
+                          pages: version.pages.filter((_, i) => i !== index)
+                        }))
+                      );
+                    }}
+                    language={activeLanguage}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Book Preview */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "1rem", backgroundColor: "#f3f4f6" }}>
+              <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem", color: "#1f2937", textAlign: "center" }}>Book Preview ({activeLanguage})</h2>
+              <div style={{ maxWidth: "600px", margin: "0 auto", backgroundColor: "#fff", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)", borderRadius: "0.5rem", overflow: "hidden" }}>
+                {languageVersions.find(v => v.language === activeLanguage)?.pages.map((page, pageIndex) => (
+                  <div key={pageIndex} style={{ padding: "2rem", borderBottom: pageIndex < page.blocks.length - 1 ? "1px solid #e5e7eb" : "none" }}>
+                    <h3 style={{ fontSize: "1.2rem", marginBottom: "1rem", color: "#4b5563", textAlign: "center" }}>Page {pageIndex + 1}</h3>
+                    {page.blocks.map((block, blockIndex) => (
+                      <div key={blockIndex} style={{ marginBottom: "1rem" }}>
+                        {block.type === "text" ? (
+                          <ReactQuill
+                            value={block.content}
+                            onChange={(content) => {
+                              const newPage = {...page};
+                              newPage.blocks[blockIndex].content = content;
+                              updatePageContent(activeLanguage, pageIndex, newPage);
+                            }}
+                            modules={{
+                              toolbar: [
+                                ['bold', 'italic', 'underline'],
+                                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                                ['clean']
+                              ]
+                            }}
+                            style={{ 
+                              height: "auto", 
+                              marginBottom: "1rem",
+                              color: "#374151",
+                              fontSize: "1rem",
+                            }}
+                          />
+                        ) : block.type === "image" && block.content ? (
+                          <div style={{ display: "flex", justifyContent: "center", marginTop: "1rem", marginBottom: "1rem" }}>
+                            <Image
+                              src={`data:image/png;base64,${block.content.b64_json}`}
+                              alt=""
+                              width={300}
+                              height={225}
+                              style={{ borderRadius: "0.25rem", maxWidth: "100%", height: "auto", boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)" }}
+                            />
+                          </div>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Final Preview */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "1rem", backgroundColor: "#e5e7eb" }}>
+              <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem", color: "#1f2937", textAlign: "center" }}>Final Preview ({activeLanguage})</h2>
+              <div style={{ maxWidth: "600px", margin: "0 auto", backgroundColor: "#fff", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)", borderRadius: "0.5rem", overflow: "hidden" }}>
+                {languageVersions.find(v => v.language === activeLanguage)?.pages.map((page, pageIndex) => (
+                  <div key={pageIndex} style={{ padding: "2rem", borderBottom: pageIndex < page.blocks.length - 1 ? "1px solid #e5e7eb" : "none" }}>
+                    <h3 style={{ fontSize: "1.2rem", marginBottom: "1rem", color: "#4b5563", textAlign: "center" }}>Page {pageIndex + 1}</h3>
+                    {page.blocks.map((block, blockIndex) => (
+                      <div key={blockIndex} style={{ marginBottom: "1rem" }}>
+                        {block.type === "text" ? (
+                          <div>
+                            <div dangerouslySetInnerHTML={{ __html: block.content }} style={{ 
+                              lineHeight: "1.6", 
+                              color: "#374151",
+                              fontSize: "1rem",
+                            }} />
+                            <TTSButton text={block.content} language={activeLanguage} />
+                          </div>
+                        ) : block.type === "image" && block.content ? (
+                          <div style={{ display: "flex", justifyContent: "center", marginTop: "1rem", marginBottom: "1rem" }}>
+                            <Image
+                              src={`data:image/png;base64,${block.content.b64_json}`}
+                              alt=""
+                              width={300}
+                              height={225}
+                              style={{ borderRadius: "0.25rem", maxWidth: "100%", height: "auto", boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)" }}
+                            />
+                          </div>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
 
       <footer style={{ marginTop: "4rem", paddingBottom: "2.5rem", textAlign: "center", color: "#d1d5db" }}>

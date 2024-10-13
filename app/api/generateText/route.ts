@@ -6,12 +6,12 @@ const together = new Together({ apiKey: process.env.TOGETHER_API_KEY });
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { prompt, storyPrompt, previousContent } = body;
+    const { prompt, storyPrompt, previousContent, language } = body;
 
     const response = await together.chat.completions.create({
       messages: [
-        { role: "system", content: "You are a creative children's story writer." },
-        { role: "user", content: `Initial story prompt: ${storyPrompt}\n\nPrevious story content:\n${previousContent}\n\nContinue this story: ${prompt}` }
+        { role: "system", content: `You are a creative children's story writer. Write in ${language}.` },
+        { role: "user", content: `Initial story prompt: ${storyPrompt}\n\nPrevious story content:\n${previousContent}\n\nContinue this story in ${language}: ${prompt}` }
       ],
       model: "meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo",
       max_tokens: 150,
