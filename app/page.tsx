@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import { useDebouncedCallback } from "use-debounce";
 import { Button } from "@/components/ui/button";
@@ -14,8 +14,8 @@ import XIcon from "@/components/icons/x-icon";
 import Logo from "@/components/logo";
 import { Document, Packer, Paragraph, TextRun, ImageRun } from "docx";
 import { saveAs } from "file-saver";
-
 import { Buffer } from 'buffer';
+
 type ImageResponse = {
   b64_json: string;
   timings: { inference: number };
@@ -34,15 +34,33 @@ type PageContent = {
   blocks: ContentBlock[];
 };
 
+type PageProps = {
+  index: number;
+  page: PageContent;
+  setPageContent: (content: PageContent) => void;
+  userAPIKey: string;
+  iterativeMode: boolean;
+  isGeneratingDocx: boolean;
+  storyPrompt: string;
+  imageCount: number;
+  onDeletePage: () => void;
+};
+
 export default function Home() {
   const [userAPIKey, setUserAPIKey] = useState("");
   const [iterativeMode, setIterativeMode] = useState(false);
   const [pages, setPages] = useState<PageContent[]>([]);
   const [isGeneratingDocx, setIsGeneratingDocx] = useState(false);
+  const [storyPrompt, setStoryPrompt] = useState("");
+  const [hasStartedStory, setHasStartedStory] = useState(false);
+  const [imageCount, setImageCount] = useState(1);
 
   // Function to add a new page
   const addNewPage = () => {
-    setPages((prevPages) => [...prevPages, { blocks: [] }]);
+    setPages((prevPages) => [
+      ...prevPages,
+      { blocks: [{ type: "text", content: "", generating: false, context: storyPrompt }] },
+    ]);
   };
 
   // Implement book download functionality
@@ -97,30 +115,19 @@ export default function Home() {
     }
   };
 
+  const startStory = () => {
+    if (storyPrompt.trim() === "") {
+      alert("Please enter an initial story prompt.");
+      return;
+    }
+    setHasStartedStory(true);
+    addNewPage();
+  };
+
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        padding: "0 1.25rem",
-        height: "100%",
-      }}
-    >
-      <header
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          paddingTop: "5rem",
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            top: "1.5rem",
-            left: "50%",
-            transform: "translateX(-50%)",
-          }}
-        >
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+      <header style={{ display: "flex", justifyContent: "center", paddingTop: "5rem" }}>
+        <div style={{ position: "absolute", top: "1.5rem", left: "50%", transform: "translateX(-50%)" }}>
           <a href="https://www.dub.sh/together-ai" target="_blank">
             <Logo />
           </a>
@@ -156,75 +163,96 @@ export default function Home() {
         </div>
       </header>
 
-      <div style={{ marginTop: "2.5rem" }}>
-        <div style={{ display: "flex", justifyContent: "center" }}>
-          <Button onClick={addNewPage}>Add New Page</Button>
-          <Button
-            onClick={downloadBook}
-            style={{ marginLeft: "1rem" }}
-            disabled={isGeneratingDocx}
-          >
-            {isGeneratingDocx ? (
-              <>
-                <Spinner
-                  style={{
-                    width: "1rem",
-                    height: "1rem",
-                    marginRight: "0.5rem",
-                  }}
-                />
-                Generating Document...
-              </>
-            ) : (
-              <>
-                <Download
-                  style={{
-                    width: "1rem",
-                    height: "1rem",
-                    marginRight: "0.5rem",
-                  }}
-                />
-                Download Book
-              </>
-            )}
-          </Button>
+      {!hasStartedStory ? (
+        <div style={{ marginTop: "2.5rem", display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem" }}>What kind of story would you like to create?</h2>
+          <textarea
+            value={storyPrompt}
+            onChange={(e) => setStoryPrompt(e.target.value)}
+            placeholder="E.g., A magical adventure in a world where animals can talk..."
+            style={{
+              width: "100%",
+              maxWidth: "600px",
+              height: "150px",
+              padding: "0.5rem",
+              marginBottom: "1rem",
+              borderRadius: "0.375rem",
+              border: "1px solid #d1d5db",
+            }}
+          />
+          <Button onClick={startStory}>Start Story</Button>
         </div>
-        <div
-          style={{
-            marginTop: "2rem",
-            display: "grid",
-            gridTemplateColumns: "1fr",
-            gap: "2rem",
-          }}
-        >
-          {pages.map((page, index) => (
-            <Page
-              key={index}
-              index={index}
-              page={page}
-              setPageContent={(content) => {
-                setPages((prevPages) => {
-                  const newPages = [...prevPages];
-                  newPages[index] = content;
-                  return newPages;
-                });
-              }}
-              userAPIKey={userAPIKey}
-              iterativeMode={iterativeMode}
-              isGeneratingDocx={isGeneratingDocx} // Pass isGeneratingDocx prop
-            />
-          ))}
-        </div>
-      </div>
+      ) : (
+        <div style={{ display: "flex", height: "calc(100vh - 100px)", overflow: "hidden" }}>
+          {/* Editing Panel */}
+          <div style={{ flex: 1, overflowY: "auto", padding: "1rem", borderRight: "1px solid #d1d5db" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "1rem" }}>
+              <Button onClick={addNewPage}>Add New Page</Button>
+              <div style={{ display: "flex", alignItems: "center" }}>
+                <label htmlFor="imageCount" style={{ marginRight: "0.5rem" }}>Images per text:</label>
+                <Input
+                  id="imageCount"
+                  type="number"
+                  min="1"
+                  max="5"
+                  value={imageCount}
+                  onChange={(e) => setImageCount(Math.max(1, Math.min(5, parseInt(e.target.value) || 1)))}
+                  style={{ width: "60px", marginRight: "0.5rem" }}
+                />
+              </div>
+            </div>
+            {pages.map((page, index) => (
+              <Page
+                key={index}
+                index={index}
+                page={page}
+                setPageContent={(content) => {
+                  setPages((prevPages) => {
+                    const newPages = [...prevPages];
+                    newPages[index] = content;
+                    return newPages;
+                  });
+                }}
+                userAPIKey={userAPIKey}
+                iterativeMode={iterativeMode}
+                isGeneratingDocx={isGeneratingDocx}
+                storyPrompt={storyPrompt}
+                imageCount={imageCount}
+                onDeletePage={() => {
+                  setPages((prevPages) => prevPages.filter((_, i) => i !== index));
+                }}
+              />
+            ))}
+          </div>
 
-      <footer
-        style={{
-          marginTop: "4rem",
-          paddingBottom: "2.5rem",
-          textAlign: "center",
-          color: "#d1d5db",
-        }}
-      >
+          {/* Book Preview */}
+          <div style={{ flex: 1, overflowY: "auto", padding: "1rem", backgroundColor: "#f3f4f6" }}>
+            <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem" }}>Book Preview</h2>
+            {pages.map((page, pageIndex) => (
+              <div key={pageIndex} style={{ marginBottom: "2rem", backgroundColor: "white", padding: "1rem", borderRadius: "0.5rem", boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)" }}>
+                <h3 style={{ fontSize: "1.2rem", marginBottom: "0.5rem" }}>Page {pageIndex + 1}</h3>
+                {page.blocks.map((block, blockIndex) => (
+                  <div key={blockIndex} style={{ marginBottom: "1rem" }}>
+                    {block.type === "text" ? (
+                      <p style={{ whiteSpace: "pre-wrap" }}>{block.content}</p>
+                    ) : block.type === "image" && block.content ? (
+                      <Image
+                        src={`data:image/png;base64,${block.content.b64_json}`}
+                        alt=""
+                        width={300}
+                        height={225}
+                        style={{ borderRadius: "0.25rem", maxWidth: "100%", height: "auto" }}
+                      />
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <footer style={{ marginTop: "4rem", paddingBottom: "2.5rem", textAlign: "center", color: "#d1d5db" }}>
         <p>
           Powered by{" "}
           <a
@@ -254,14 +282,7 @@ export default function Home() {
           </a>
         </p>
 
-        <div
-          style={{
-            marginTop: "2rem",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-          }}
-        >
+        <div style={{ marginTop: "2rem", display: "flex", flexDirection: "column", alignItems: "center" }}>
           <p style={{ display: "none" }}>
             100% free and{" "}
             <a
@@ -309,20 +330,29 @@ export default function Home() {
             </a>
           </div>
         </div>
+        <Button
+          onClick={downloadBook}
+          style={{ marginTop: "1rem" }}
+          disabled={isGeneratingDocx}
+        >
+          {isGeneratingDocx ? (
+            <>
+              <Spinner style={{ width: "1rem", height: "1rem", marginRight: "0.5rem" }} />
+              Generating Document...
+            </>
+          ) : (
+            <>
+              <Download style={{ width: "1rem", height: "1rem", marginRight: "0.5rem" }} />
+              Download Book
+            </>
+          )}
+        </Button>
       </footer>
     </div>
   );
 }
 
-type PageProps = {
-  index: number;
-  page: PageContent;
-  setPageContent: (content: PageContent) => void;
-  userAPIKey: string;
-  iterativeMode: boolean;
-  isGeneratingDocx: boolean; // Add isGeneratingDocx prop
-};
-
+// Update the Page component to include a delete button for the entire page
 function Page({
   index,
   page,
@@ -330,9 +360,11 @@ function Page({
   userAPIKey,
   iterativeMode,
   isGeneratingDocx,
-}: PageProps) {
+  storyPrompt,
+  imageCount,
+  onDeletePage,
+}: PageProps & { imageCount: number; onDeletePage: () => void }) {
   const [blocks, setBlocks] = useState<ContentBlock[]>(page.blocks);
-  const [imageCount, setImageCount] = useState(1); // New state for image count
   const [selectedText, setSelectedText] = useState<{ blockIndex: number; text: string } | null>(null);
 
   useEffect(() => {
@@ -577,7 +609,14 @@ function Page({
       const response = await fetch("/api/generateText", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: context }),
+        body: JSON.stringify({ 
+          prompt: context, 
+          storyPrompt: storyPrompt,
+          previousContent: blocks.slice(0, blockIndex)
+            .filter(block => block.type === "text")
+            .map(block => block.content)
+            .join("\n")
+        }),
       });
       if (!response.ok) throw new Error("Failed to generate text");
       const data = await response.json();
@@ -622,6 +661,13 @@ function Page({
 
   return (
     <div className="book-page" style={{ border: "1px solid #d1d5db", borderRadius: "0.5rem", padding: "1rem", backgroundColor: "white" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+        <h3>Page {index + 1}</h3>
+        <Button onClick={onDeletePage} size="sm" variant="destructive">
+          <Trash2 style={{ width: "1rem", height: "1rem", marginRight: "0.25rem" }} />
+          Delete Page
+        </Button>
+      </div>
       {!isGeneratingDocx && (
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem", alignItems: "center" }}>
           <div>
@@ -633,21 +679,6 @@ function Page({
               <Plus style={{ width: "1rem", height: "1rem", marginRight: "0.25rem" }} />
               Add Image
             </Button>
-          </div>
-          <div style={{ display: "flex", alignItems: "center" }}>
-            <label htmlFor="imageCount" style={{ marginRight: "0.5rem" }}>Images per text:</label>
-            <Input
-              id="imageCount"
-              type="number"
-              min="1"
-              max="5"
-              value={imageCount}
-              onChange={(e) => setImageCount(Math.max(1, Math.min(5, parseInt(e.target.value) || 1)))}
-              style={{ width: "60px", marginRight: "0.5rem" }}
-            />
-            <span style={{ fontSize: "0.875rem", color: "#6b7280" }}>
-              Generate {imageCount} image{imageCount > 1 ? 's' : ''} for each text block
-            </span>
           </div>
         </div>
       )}
