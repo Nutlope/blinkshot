@@ -12,7 +12,8 @@ import imagePlaceholder from "@/public/image-placeholder.png";
 import { useQuery } from "@tanstack/react-query";
 import { useDebounce } from "@uidotdev/usehooks";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { Download } from "lucide-react";
 
 type ImageResponse = {
   b64_json: string;
@@ -28,6 +29,8 @@ export default function Home() {
     { prompt: string; image: ImageResponse }[]
   >([]);
   let [activeIndex, setActiveIndex] = useState<number>();
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const { data: image, isFetching } = useQuery({
     placeholderData: (previousData) => previousData,
@@ -62,6 +65,21 @@ export default function Home() {
 
   let activeImage =
     activeIndex !== undefined ? generations[activeIndex].image : undefined;
+
+  // Add this new function to handle the download
+  const handleDownload = useCallback(() => {
+    if (activeImage) {
+      setIsDownloading(true);
+      const url = `data:image/png;base64,${activeImage.b64_json}`;
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `generated-image-${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => setIsDownloading(false), 1000); // Reset after 1 second
+    }
+  }, [activeImage]);
 
   return (
     <div className="flex h-full flex-col px-5">
@@ -151,6 +169,24 @@ export default function Home() {
                 alt=""
                 className={`${isFetching ? "animate-pulse" : ""} max-w-full rounded-lg object-cover shadow-sm shadow-black`}
               />
+            </div>
+
+            {/* Update the download button here */}
+            <div className="mt-4 flex justify-center">
+              <Button
+                onClick={handleDownload}
+                variant="outline"
+                size="sm"
+                className="inline-flex items-center gap-2"
+                disabled={isDownloading}
+              >
+                {isDownloading ? (
+                  <Spinner className="size-4" />
+                ) : (
+                  <Download className="size-4" />
+                )}
+                {isDownloading ? 'Downloading...' : 'Download Image'}
+              </Button>
             </div>
 
             <div className="mt-4 flex gap-4 overflow-x-scroll pb-4">
