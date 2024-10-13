@@ -8,13 +8,17 @@ import { useDebouncedCallback } from "use-debounce";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Spinner from "@/components/spinner";
-import { Plus, Download, Trash2 } from "lucide-react";
+import { Plus, Download, Trash2, Bold, Italic, Underline } from "lucide-react";
 import GithubIcon from "@/components/icons/github-icon";
 import XIcon from "@/components/icons/x-icon";
 import Logo from "@/components/logo";
 import { Document, Packer, Paragraph, TextRun, ImageRun } from "docx";
 import { saveAs } from "file-saver";
 import { Buffer } from 'buffer';
+import dynamic from 'next/dynamic';
+import 'react-quill/dist/quill.snow.css';
+
+const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
 
 type ImageResponse = {
   b64_json: string;
@@ -124,6 +128,31 @@ export default function Home() {
     addNewPage();
   };
 
+  const updatePageContent = (pageIndex: number, newContent: PageContent) => {
+    setPages((prevPages) => {
+      const newPages = [...prevPages];
+      newPages[pageIndex] = newContent;
+      return newPages;
+    });
+  };
+
+  const applyFormatting = (pageIndex: number, blockIndex: number, format: 'bold' | 'italic' | 'underline') => {
+    setPages((prevPages) => {
+      const newPages = [...prevPages];
+      const block = newPages[pageIndex].blocks[blockIndex];
+      if (block.type === 'text') {
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          const selectedText = range.toString();
+          const formattedText = `<${format}>${selectedText}</${format}>`;
+          block.content = block.content.replace(selectedText, formattedText);
+        }
+      }
+      return newPages;
+    });
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
       <header style={{ display: "flex", justifyContent: "center", paddingTop: "5rem" }}>
@@ -227,7 +256,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Book Preview */}
+          {/* Book Preview with Quill */}
           <div style={{ flex: 1, overflowY: "auto", padding: "1rem", backgroundColor: "#f3f4f6" }}>
             <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem", color: "#1f2937", textAlign: "center" }}>Book Preview</h2>
             <div style={{ maxWidth: "600px", margin: "0 auto", backgroundColor: "#fff", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)", borderRadius: "0.5rem", overflow: "hidden" }}>
@@ -237,7 +266,27 @@ export default function Home() {
                   {page.blocks.map((block, blockIndex) => (
                     <div key={blockIndex} style={{ marginBottom: "1rem" }}>
                       {block.type === "text" ? (
-                        <p style={{ whiteSpace: "pre-wrap", lineHeight: "1.6", color: "#374151", fontSize: "1rem" }}>{block.content}</p>
+                        <ReactQuill
+                          value={block.content}
+                          onChange={(content) => {
+                            const newPage = {...page};
+                            newPage.blocks[blockIndex].content = content;
+                            updatePageContent(pageIndex, newPage);
+                          }}
+                          modules={{
+                            toolbar: [
+                              ['bold', 'italic', 'underline'],
+                              [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                              ['clean']
+                            ]
+                          }}
+                          style={{ 
+                            height: "auto", 
+                            marginBottom: "1rem",
+                            color: "#374151",
+                            fontSize: "1rem",
+                          }}
+                        />
                       ) : block.type === "image" && block.content ? (
                         <div style={{ display: "flex", justifyContent: "center", marginTop: "1rem", marginBottom: "1rem" }}>
                           <Image
@@ -378,12 +427,13 @@ function Page({
   }, [blocks]);
 
   // Function to handle text selection
-  const handleTextSelection = (blockIndex: number) => {
-    const selection = window.getSelection();
-    if (selection && selection.toString().length > 0) {
+  const handleTextSelection = (blockIndex: number, e: React.MouseEvent<HTMLTextAreaElement>) => {
+    const textarea = e.currentTarget;
+    const selectedText = textarea.value.substring(textarea.selectionStart, textarea.selectionEnd);
+    if (selectedText) {
       setSelectedText({
         blockIndex,
-        text: selection.toString(),
+        text: selectedText,
       });
     }
   };
@@ -442,12 +492,7 @@ function Page({
     generateImageForTextBlock(blockIndex, content);
   };
 
-  // Replace handleTextChange with this new function
-  const handleTextChange = (
-    blockIndex: number,
-    event: React.ChangeEvent<HTMLTextAreaElement>
-  ) => {
-    const content = event.target.value;
+  const handleTextChange = (blockIndex: number, content: string) => {
     updateTextBlock(blockIndex, content);
   };
 
@@ -620,7 +665,7 @@ function Page({
           storyPrompt: storyPrompt,
           previousContent: blocks.slice(0, blockIndex)
             .filter(block => block.type === "text")
-            .map(block => block.content)
+            .map(block => block.content.replace(/<[^>]*>/g, '')) // Strip HTML tags
             .join("\n")
         }),
       });
@@ -694,10 +739,17 @@ function Page({
             <div key={idx} style={{ marginBottom: "1rem", position: "relative" }}>
               <textarea
                 value={block.content}
-                onChange={(e) => handleTextChange(idx, e)}
-                onMouseUp={() => handleTextSelection(idx)}
+                onChange={(e) => handleTextChange(idx, e.target.value)}
+                onMouseUp={(e) => handleTextSelection(idx, e)}
                 disabled={isGeneratingDocx}
-                style={{ width: "100%", minHeight: "100px", border: "1px solid #d1d5db", borderRadius: "0.375rem", backgroundColor: "#e5e7eb", padding: "1rem", fontSize: "1rem", color: "#374151", resize: "vertical", outline: "none" }}
+                style={{ 
+                  width: "100%",
+                  minHeight: "100px",
+                  padding: "0.5rem",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "0.25rem",
+                  resize: "vertical"
+                }}
               />
               {!isGeneratingDocx && (
                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: "0.5rem" }}>
