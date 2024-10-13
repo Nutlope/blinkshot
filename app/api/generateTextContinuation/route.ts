@@ -18,7 +18,7 @@ export async function POST(req: Request) {
       temperature: 0.7,
     });
 
-    const continuationText = response.choices[0].message.content.trim();
+    const continuationText = response.choices[0]?.message?.content?.trim() ?? '';
 
     return NextResponse.json({ continuation: continuationText });
   } catch (error) {
