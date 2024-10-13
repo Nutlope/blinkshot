@@ -1,26 +1,36 @@
 import { NextResponse } from 'next/server';
-import Together from "together-ai";
-
-const together = new Together({ apiKey: process.env.TOGETHER_API_KEY });
+import { TogetherAI } from "@langchain/community/llms/togetherai";
+import { PromptTemplate } from "@langchain/core/prompts";
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { prompt, storyPrompt, previousContent, language } = body;
 
-    const response = await together.chat.completions.create({
-      messages: [
-        { role: "system", content: `You are a creative children's story writer. Write in ${language}.` },
-        { role: "user", content: `Initial story prompt: ${storyPrompt}\n\nPrevious story content:\n${previousContent}\n\nContinue this story in ${language}: ${prompt}` }
-      ],
-      model: "meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo",
-      max_tokens: 150,
+    const llm = new TogetherAI({
+      apiKey: process.env.TOGETHER_API_KEY,
+      model: "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+      maxTokens: 256,
       temperature: 0.7,
     });
 
-    const generatedText = response.choices[0]?.message?.content?.trim() || '';
+    const promptTemplate = PromptTemplate.fromTemplate(
+      "You are a creative children's story writer. Write in {language}.\n\n" +
+      "Initial story prompt: {storyPrompt}\n\n" +
+      "Previous story content:\n{previousContent}\n\n" +
+      "Continue this story in {language}: {prompt}"
+    );
 
-    return NextResponse.json({ text: generatedText });
+    const formattedPrompt = await promptTemplate.format({
+      language,
+      storyPrompt,
+      previousContent,
+      prompt,
+    });
+
+    const generatedText = await llm.call(formattedPrompt);
+
+    return NextResponse.json({ text: generatedText.trim() });
   } catch (error) {
     console.error('Error in text generation:', error);
     return NextResponse.json({ 
