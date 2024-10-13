@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     const response = await together.chat.completions.create({
       messages: [
         { role: "system", content: "You are a creative children's story writer." },
-        { role: "user", content: prompt || "Start a children's story" }
+        { role: "user", content: `Continue this story: ${prompt}` }
       ],
       model: "meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo",
       max_tokens: 150,
