@@ -306,7 +306,9 @@ export default function Home() {
     return pages.map(page => ({
       panels: page.blocks.map(block => ({
         type: block.type as 'image' | 'text',
-        content: block.type === 'image' ? `data:image/png;base64,${block.content.b64_json}` : block.content,
+        content: block.type === 'image' && block.content 
+          ? `data:image/png;base64,${block.content.b64_json}` 
+          : (block.type === 'text' ? block.content : ''),
         size: Math.random() > 0.7 ? 'large' : 'medium', // Randomly assign sizes for variety
         speechBubble: block.type === 'text' && Math.random() > 0.5, // Randomly make some text blocks speech bubbles
       }))

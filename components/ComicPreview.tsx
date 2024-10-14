@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Info } from 'lucide-react';
 
 type Panel = {
   type: 'image' | 'text';
@@ -75,12 +75,16 @@ const ComicPreview: React.FC<ComicPreviewProps> = ({ pages }) => {
       <div key={index} style={panelStyle}>
         {panel.type === 'image' ? (
           <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: '200px' }}>
-            <Image
-              src={panel.content}
-              alt={`Panel ${index}`}
-              layout="fill"
-              objectFit="cover"
-            />
+            {panel.content ? (
+              <Image
+                src={panel.content}
+                alt={`Panel ${index}`}
+                layout="fill"
+                objectFit="cover"
+              />
+            ) : (
+              <div>No image available</div>
+            )}
           </div>
         ) : (
           <div style={contentStyle} dangerouslySetInnerHTML={{ __html: panel.content }} />
@@ -90,7 +94,7 @@ const ComicPreview: React.FC<ComicPreviewProps> = ({ pages }) => {
   };
 
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto', backgroundColor: '#f0f0f0', padding: '20px', borderRadius: '10px', boxShadow: '0 0 10px rgba(0,0,0,0.1)' }}>
+    <div style={{ maxWidth: '800px', margin: '0 auto', backgroundColor: '#f0f0f0', padding: '20px', borderRadius: '10px', boxShadow: '0 0 10px rgba(0,0,0,0.1)', position: 'relative' }}>
       <div style={{ marginBottom: '20px' }}>
         <label style={{ marginRight: '10px' }}>
           Background Color:
@@ -134,6 +138,49 @@ const ComicPreview: React.FC<ComicPreviewProps> = ({ pages }) => {
           Next Page <ChevronRight />
         </button>
       </div>
+      <div style={{
+        position: "absolute",
+        top: "50px",
+        left: "10px",
+        backgroundColor: "#4B5563",
+        color: "white",
+        padding: "5px 10px",
+        borderRadius: "5px",
+        display: "flex",
+        alignItems: "center",
+        cursor: "pointer",
+      }} className="tooltip">
+        <Info size={16} style={{ marginRight: "5px" }} />
+        Info
+        <span className="tooltiptext">To add a new comic page, click "Add New Page" in the edit panel on the left.</span>
+      </div>
+      <style jsx>{`
+        .tooltip {
+          position: relative;
+          display: inline-block;
+        }
+        .tooltip .tooltiptext {
+          visibility: hidden;
+          width: 200px;
+          background-color: #555;
+          color: #fff;
+          text-align: center;
+          border-radius: 6px;
+          padding: 5px;
+          position: absolute;
+          z-index: 1;
+          top: 125%;
+          left: 0;
+          margin-left: 0;
+          margin-top: 5px;
+          opacity: 0;
+          transition: opacity 0.3s;
+        }
+        .tooltip:hover .tooltiptext {
+          visibility: visible;
+          opacity: 1;
+        }
+      `}</style>
     </div>
   );
 };

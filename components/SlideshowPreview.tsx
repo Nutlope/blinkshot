@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { ChevronLeft, ChevronRight, Smartphone, Tablet, Monitor, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Smartphone, Tablet, Monitor, X, Info } from 'lucide-react';
 
 type Block = {
   type: string;
@@ -199,6 +199,7 @@ const SlideshowPreview: React.FC<SlideshowPreviewProps> = ({ pages }) => {
       borderRadius: "0.5rem", 
       overflow: "hidden",
       padding: "2rem",
+      position: "relative",
     }}>
       {!isFullScreen && (
         <div style={{ 
@@ -247,8 +248,53 @@ const SlideshowPreview: React.FC<SlideshowPreviewProps> = ({ pages }) => {
           <PreviewContent />
         </div>
       ) : (
-        <PreviewContent />
+        <div style={{ position: "relative" }}>
+          <PreviewContent />
+          <div style={{
+            position: "absolute",
+            top: "50px",
+            left: "10px",
+            backgroundColor: "#4B5563",
+            color: "white",
+            padding: "5px 10px",
+            borderRadius: "5px",
+            display: "flex",
+            alignItems: "center",
+            cursor: "pointer",
+          }} className="tooltip">
+            <Info size={16} style={{ marginRight: "5px" }} />
+            Info
+            <span className="tooltiptext">To add a new slide, click "Add New Page" in the edit panel on the left.</span>
+          </div>
+        </div>
       )}
+      <style jsx>{`
+        .tooltip {
+          position: relative;
+          display: inline-block;
+        }
+        .tooltip .tooltiptext {
+          visibility: hidden;
+          width: 200px;
+          background-color: #555;
+          color: #fff;
+          text-align: center;
+          border-radius: 6px;
+          padding: 5px;
+          position: absolute;
+          z-index: 1;
+          top: 125%;
+          left: 0;
+          margin-left: 0;
+          margin-top: 5px;
+          opacity: 0;
+          transition: opacity 0.3s;
+        }
+        .tooltip:hover .tooltiptext {
+          visibility: visible;
+          opacity: 1;
+        }
+      `}</style>
     </div>
   );
 };
