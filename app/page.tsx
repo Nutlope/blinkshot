@@ -8,18 +8,29 @@ import { useDebouncedCallback } from "use-debounce";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Spinner from "@/components/spinner";
-import { Plus, Download, Trash2, Bold, Italic, Underline } from "lucide-react";
+import { Plus, Download, Trash2, Book, Newspaper, Film, Presentation } from "lucide-react";
 import GithubIcon from "@/components/icons/github-icon";
 import XIcon from "@/components/icons/x-icon";
 import Logo from "@/components/logo";
 import { Document, Packer, Paragraph, TextRun, ImageRun } from "docx";
 import { saveAs } from "file-saver";
-import { Buffer } from 'buffer';
 import dynamic from 'next/dynamic';
 import 'react-quill/dist/quill.snow.css';
 import TTSButton from '@/components/TTSButton';
+import { v4 as uuidv4 } from 'uuid';
+import EditableBookPreview from '@/components/EditableBookPreview';
+import FinalBookPreview from '@/components/FinalBookPreview';
+import FAB from '@/components/ui/FAB';
+import SlideshowPreview from '@/components/SlideshowPreview';
+import ComicPreview from '@/components/ComicPreview';
+
+// Use dynamic import for MagazinePreview
+const MagazinePreview = dynamic(() => import('@/components/MagazinePreview'), { ssr: false });
 
 const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
+
+// Add this type declaration for file-saver
+declare module 'file-saver';
 
 type ImageResponse = {
   b64_json: string;
@@ -56,6 +67,15 @@ type LanguageVersion = {
   pages: PageContent[];
 };
 
+type ComicPage = {
+  panels: {
+    type: 'image' | 'text';
+    content: string;
+    size: 'small' | 'medium' | 'large';
+    speechBubble: boolean;
+  }[];
+};
+
 export default function Home() {
   const [userAPIKey, setUserAPIKey] = useState("");
   const [iterativeMode, setIterativeMode] = useState(false);
@@ -70,6 +90,10 @@ export default function Home() {
   const [languageVersions, setLanguageVersions] = useState<LanguageVersion[]>([
     { language: "English", pages: [] }
   ]);
+  const [showNewPreviews, setShowNewPreviews] = useState(false);
+  const [showFormatMenu, setShowFormatMenu] = useState(false);
+  const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
+  const formatMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     return () => {
@@ -108,7 +132,7 @@ export default function Home() {
     );
   };
 
-  // Implement book download functionality
+  // Update the downloadBook function
   const downloadBook = async () => {
     try {
       setIsGeneratingDocx(true);
@@ -123,9 +147,11 @@ export default function Home() {
       for (const page of pages) {
         for (const block of page.blocks) {
           if (block.type === "text") {
-            doc.addParagraph(new Paragraph({
-              children: [new TextRun(block.content)],
-            }));
+            doc.addSection({
+              children: [new Paragraph({
+                children: [new TextRun(block.content)],
+              })],
+            });
           } else if (block.type === "image" && block.content) {
             try {
               const imageBuffer = Buffer.from(block.content.b64_json, "base64");
@@ -136,9 +162,11 @@ export default function Home() {
                   height: 300,
                 },
               });
-              doc.addParagraph(new Paragraph({
-                children: [image],
-              }));
+              doc.addSection({
+                children: [new Paragraph({
+                  children: [image],
+                })],
+              });
             } catch (imageError) {
               console.error("Error adding image:", imageError);
             }
@@ -146,7 +174,9 @@ export default function Home() {
         }
         // Add a page break after each page, except the last one
         if (page !== pages[pages.length - 1]) {
-          doc.addParagraph(new Paragraph({ pageBreakBefore: true }));
+          doc.addSection({
+            children: [new Paragraph({ pageBreakBefore: true })],
+          });
         }
       }
 
@@ -232,8 +262,62 @@ export default function Home() {
     );
   };
 
+  const toggleNewPreviews = () => {
+    setShowNewPreviews(!showNewPreviews);
+  };
+
+  const toggleFormatMenu = () => {
+    setShowFormatMenu(!showFormatMenu);
+  };
+
+  const handleSelectFormat = (format: string) => {
+    setSelectedFormat(format);
+    setShowNewPreviews(true);
+  };
+
+  // Close the format menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (formatMenuRef.current && !formatMenuRef.current.contains(event.target as Node)) {
+        setShowFormatMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const formatButtonStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '0.5rem',
+    border: 'none',
+    background: 'none',
+    cursor: 'pointer',
+    width: '100%',
+    textAlign: 'left' as const,
+    color: '#4B5563',
+  };
+
+  // Add this function to convert the existing content to comic format
+  const convertToComicFormat = (pages: PageContent[]): ComicPage[] => {
+    return pages.map(page => ({
+      panels: page.blocks.map(block => ({
+        type: block.type as 'image' | 'text',
+        content: block.type === 'image' ? `data:image/png;base64,${block.content.b64_json}` : block.content,
+        size: Math.random() > 0.7 ? 'large' : 'medium', // Randomly assign sizes for variety
+        speechBubble: block.type === 'text' && Math.random() > 0.5, // Randomly make some text blocks speech bubbles
+      }))
+    }));
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+      {/* Floating Action Button (FAB) */}
+      <FAB onSelectFormat={handleSelectFormat} />
+
       <header style={{ display: "flex", justifyContent: "center", paddingTop: "5rem" }}>
         <div style={{ position: "absolute", top: "1.5rem", left: "50%", transform: "translateX(-50%)" }}>
           <a href="https://www.dub.sh/together-ai" target="_blank">
@@ -264,7 +348,6 @@ export default function Home() {
               marginTop: "0.25rem",
               backgroundColor: "#9ca3af",
               color: "#e5e7eb",
-              placeholderColor: "#d1d5db",
             }}
             onChange={(e) => setUserAPIKey(e.target.value)}
           />
@@ -355,95 +438,90 @@ export default function Home() {
                         }))
                       );
                     }}
-                    language={activeLanguage}
                   />
                 ))}
               </div>
             </div>
 
-            {/* Book Preview */}
+            {/* Editable Book Preview */}
             <div style={{ flex: 1, overflowY: "auto", padding: "1rem", backgroundColor: "#f3f4f6" }}>
-              <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem", color: "#1f2937", textAlign: "center" }}>Book Preview ({activeLanguage})</h2>
-              <div style={{ maxWidth: "600px", margin: "0 auto", backgroundColor: "#fff", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)", borderRadius: "0.5rem", overflow: "hidden" }}>
-                {languageVersions.find(v => v.language === activeLanguage)?.pages.map((page, pageIndex) => (
-                  <div key={pageIndex} style={{ padding: "2rem", borderBottom: pageIndex < page.blocks.length - 1 ? "1px solid #e5e7eb" : "none" }}>
-                    <h3 style={{ fontSize: "1.2rem", marginBottom: "1rem", color: "#4b5563", textAlign: "center" }}>Page {pageIndex + 1}</h3>
-                    {page.blocks.map((block, blockIndex) => (
-                      <div key={blockIndex} style={{ marginBottom: "1rem" }}>
-                        {block.type === "text" ? (
-                          <ReactQuill
-                            value={block.content}
-                            onChange={(content) => {
-                              const newPage = {...page};
-                              newPage.blocks[blockIndex].content = content;
-                              updatePageContent(activeLanguage, pageIndex, newPage);
-                            }}
-                            modules={{
-                              toolbar: [
-                                ['bold', 'italic', 'underline'],
-                                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                                ['clean']
-                              ]
-                            }}
-                            style={{ 
-                              height: "auto", 
-                              marginBottom: "1rem",
-                              color: "#374151",
-                              fontSize: "1rem",
-                            }}
-                          />
-                        ) : block.type === "image" && block.content ? (
-                          <div style={{ display: "flex", justifyContent: "center", marginTop: "1rem", marginBottom: "1rem" }}>
-                            <Image
-                              src={`data:image/png;base64,${block.content.b64_json}`}
-                              alt=""
-                              width={300}
-                              height={225}
-                              style={{ borderRadius: "0.25rem", maxWidth: "100%", height: "auto", boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)" }}
-                            />
-                          </div>
-                        ) : null}
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
+              <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem", color: "#1f2937", textAlign: "center" }}>Book Preview (Editable) ({activeLanguage})</h2>
+              <EditableBookPreview
+                pages={languageVersions.find(v => v.language === activeLanguage)?.pages || []}
+                language={activeLanguage}
+                updatePageContent={(pageIndex, newPage) => {
+                  updatePageContent(activeLanguage, pageIndex, newPage);
+                }}
+              />
             </div>
 
-            {/* Final Preview */}
-            <div style={{ flex: 1, overflowY: "auto", padding: "1rem", backgroundColor: "#e5e7eb" }}>
-              <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem", color: "#1f2937", textAlign: "center" }}>Final Preview ({activeLanguage})</h2>
-              <div style={{ maxWidth: "600px", margin: "0 auto", backgroundColor: "#fff", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)", borderRadius: "0.5rem", overflow: "hidden" }}>
-                {languageVersions.find(v => v.language === activeLanguage)?.pages.map((page, pageIndex) => (
-                  <div key={pageIndex} style={{ padding: "2rem", borderBottom: pageIndex < page.blocks.length - 1 ? "1px solid #e5e7eb" : "none" }}>
-                    <h3 style={{ fontSize: "1.2rem", marginBottom: "1rem", color: "#4b5563", textAlign: "center" }}>Page {pageIndex + 1}</h3>
-                    {page.blocks.map((block, blockIndex) => (
-                      <div key={blockIndex} style={{ marginBottom: "1rem" }}>
-                        {block.type === "text" ? (
-                          <div>
-                            <div dangerouslySetInnerHTML={{ __html: block.content }} style={{ 
-                              lineHeight: "1.6", 
-                              color: "#374151",
-                              fontSize: "1rem",
-                            }} />
-                            <TTSButton text={block.content} language={activeLanguage} />
-                          </div>
-                        ) : block.type === "image" && block.content ? (
-                          <div style={{ display: "flex", justifyContent: "center", marginTop: "1rem", marginBottom: "1rem" }}>
-                            <Image
-                              src={`data:image/png;base64,${block.content.b64_json}`}
-                              alt=""
-                              width={300}
-                              height={225}
-                              style={{ borderRadius: "0.25rem", maxWidth: "100%", height: "auto", boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)" }}
-                            />
-                          </div>
-                        ) : null}
-                      </div>
-                    ))}
+            {/* Final Previews */}
+            <div style={{ flex: 2, overflowY: "auto", padding: "1rem", backgroundColor: "#e5e7eb" }}>
+              {!showNewPreviews ? (
+                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between" }}>
+                  {/* Final Book Preview */}
+                  <div style={{ flex: 1, margin: "1rem" }}>
+                    <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem", color: "#1f2937", textAlign: "center" }}>Book Preview (Final) ({activeLanguage})</h2>
+                    <FinalBookPreview
+                      pages={languageVersions.find(v => v.language === activeLanguage)?.pages || []}
+                      language={activeLanguage}
+                    />
                   </div>
-                ))}
-              </div>
+
+                  {/* Magazine Final Preview */}
+                  <div style={{ flex: 1, margin: "1rem" }}>
+                    <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem", color: "#1f2937", textAlign: "center" }}>Magazine Preview ({activeLanguage})</h2>
+                    <MagazinePreview
+                      pages={languageVersions.find(v => v.language === activeLanguage)?.pages.map(page => ({
+                        ...page,
+                        blocks: page.blocks.map(block => ({ ...block, id: block.id || uuidv4() }))
+                      })) || []}
+                      language={activeLanguage}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between" }}>
+                  {selectedFormat === 'book' && (
+                    <div style={{ flex: 1, margin: "1rem" }}>
+                      <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem", color: "#1f2937", textAlign: "center" }}>Book Preview (Final) ({activeLanguage})</h2>
+                      <FinalBookPreview
+                        pages={languageVersions.find(v => v.language === activeLanguage)?.pages || []}
+                        language={activeLanguage}
+                      />
+                    </div>
+                  )}
+                  {selectedFormat === 'magazine' && (
+                    <div style={{ flex: 1, margin: "1rem" }}>
+                      <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem", color: "#1f2937", textAlign: "center" }}>Magazine Preview ({activeLanguage})</h2>
+                      <MagazinePreview
+                        pages={languageVersions.find(v => v.language === activeLanguage)?.pages.map(page => ({
+                          ...page,
+                          blocks: page.blocks.map(block => ({ ...block, id: block.id || uuidv4() }))
+                        })) || []}
+                        language={activeLanguage}
+                      />
+                    </div>
+                  )}
+                  {selectedFormat === 'comic' && (
+                    <div style={{ flex: 1, margin: "1rem" }}>
+                      <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem", color: "#1f2937", textAlign: "center" }}>Comic Book Preview ({activeLanguage})</h2>
+                      <ComicPreview
+                        pages={convertToComicFormat(languageVersions.find(v => v.language === activeLanguage)?.pages || [])}
+                      />
+                    </div>
+                  )}
+                  {selectedFormat === 'slideshow' && (
+                    <div style={{ flex: 1, margin: "1rem" }}>
+                      <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem", color: "#1f2937", textAlign: "center" }}>Slideshow Preview ({activeLanguage})</h2>
+                      <SlideshowPreview
+                        pages={languageVersions.find(v => v.language === activeLanguage)?.pages || []}
+                        language={activeLanguage}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </>
