@@ -8,7 +8,7 @@ import { useDebouncedCallback } from "use-debounce";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Spinner from "@/components/spinner";
-import { Plus, Download, Trash2, Book, Newspaper, Film, Presentation } from "lucide-react";
+import { Plus, Download, Trash2, Book, Newspaper, Film, Presentation, RefreshCw } from "lucide-react";
 import GithubIcon from "@/components/icons/github-icon";
 import XIcon from "@/components/icons/x-icon";
 import Logo from "@/components/logo";
@@ -23,6 +23,8 @@ import FinalBookPreview from '@/components/FinalBookPreview';
 import FAB from '@/components/ui/FAB';
 import SlideshowPreview from '@/components/SlideshowPreview';
 import ComicPreview from '@/components/ComicPreview';
+// Remove or comment out the VideoGenerator import
+// import VideoGenerator from '@/components/VideoGenerator';
 
 // Use dynamic import for MagazinePreview
 const MagazinePreview = dynamic(() => import('@/components/MagazinePreview'), { ssr: false });
@@ -39,12 +41,8 @@ type ImageResponse = {
 
 type ContentBlock =
   | { type: "text"; content: string; generating: boolean; context?: string }
-  | {
-      type: "image";
-      content: ImageResponse | null;
-      generating: boolean;
-      prompt: string;
-    };
+  | { type: "image"; content: ImageResponse | null; generating: boolean; prompt: string; }
+  | { type: "video"; content: string; generating: boolean; };
 
 type PageContent = {
   blocks: ContentBlock[];
@@ -60,6 +58,7 @@ type PageProps = {
   storyPrompt: string;
   imageCount: number;
   onDeletePage: () => void;
+  onAddVideo: (videoUrl: string) => void;
 };
 
 type LanguageVersion = {
@@ -94,6 +93,7 @@ export default function Home() {
   const [showFormatMenu, setShowFormatMenu] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
   const formatMenuRef = useRef<HTMLDivElement>(null);
+  const [availableLanguages, setAvailableLanguages] = useState(['English']); // Add this line
 
   useEffect(() => {
     return () => {
@@ -440,6 +440,10 @@ export default function Home() {
                         }))
                       );
                     }}
+                    onAddVideo={(videoUrl) => {
+                      // Keep this function for future use, but it won't be called for now
+                      console.log("Video functionality is currently disabled");
+                    }}
                   />
                 ))}
               </div>
@@ -454,6 +458,7 @@ export default function Home() {
                 updatePageContent={(pageIndex, newPage) => {
                   updatePageContent(activeLanguage, pageIndex, newPage);
                 }}
+                availableLanguages={availableLanguages} // Add this line
               />
             </div>
 
@@ -640,7 +645,8 @@ function Page({
   storyPrompt,
   imageCount,
   onDeletePage,
-}: PageProps & { imageCount: number; onDeletePage: () => void }) {
+  onAddVideo,
+}: PageProps) {
   const [blocks, setBlocks] = useState<ContentBlock[]>(page.blocks);
   const [selectedText, setSelectedText] = useState<{ blockIndex: number; text: string } | null>(null);
 
@@ -661,11 +667,13 @@ function Page({
   };
 
   // Function to add a new block
-  const addBlock = (type: "text" | "image", afterIndex?: number) => {
+  const addBlock = (type: "text" | "image" | "video", afterIndex?: number) => {
     const newBlock: ContentBlock =
       type === "text"
         ? { type: "text", content: "", generating: false, context: selectedText?.text || "" }
-        : { type: "image", content: null, generating: false, prompt: "" };
+        : type === "image"
+          ? { type: "image", content: null, generating: false, prompt: "" }
+          : { type: "video", content: "", generating: false };
     
     setBlocks((prevBlocks) => {
       const newBlocks = [...prevBlocks];
@@ -924,6 +932,20 @@ function Page({
     }
   };
 
+  const resetPage = () => {
+    // Keep only the first text block and reset its content
+    const resetBlocks: ContentBlock[] = [{
+      type: "text",
+      content: "",
+      generating: false,
+      context: ""
+    }];
+
+    setBlocks(resetBlocks);
+    setPageContent({ blocks: resetBlocks });
+    setSelectedText(null);
+  };
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -952,6 +974,11 @@ function Page({
               <Plus style={{ width: "1rem", height: "1rem", marginRight: "0.25rem" }} />
               Add Image
             </Button>
+            {/* Remove or comment out the Add Video button */}
+            {/* <Button onClick={() => addBlock("video")} size="sm">
+              <Plus style={{ width: "1rem", height: "1rem", marginRight: "0.25rem" }} />
+              Add Video
+            </Button> */}
           </div>
         </div>
       )}
@@ -983,20 +1010,38 @@ function Page({
                     <Trash2 style={{ width: "1rem", height: "1rem", marginRight: "0.25rem" }} />
                     Delete
                   </Button>
-                  <Button
-                    onClick={() => addBlock("text", idx)}
-                    size="sm"
-                    disabled={!selectedText || selectedText.blockIndex !== idx}
-                  >
-                    <Plus style={{ width: "1rem", height: "1rem", marginRight: "0.25rem" }} />
-                    Continue Story
-                  </Button>
+                  <div>
+                    <Button
+                      onClick={resetPage}
+                      size="sm"
+                      variant="outline"
+                      style={{ marginRight: "0.5rem" }}
+                    >
+                      <RefreshCw style={{ width: "1rem", height: "1rem", marginRight: "0.25rem" }} />
+                      Reset Page
+                    </Button>
+                    <Button
+                      onClick={() => addBlock("text", idx)}
+                      size="sm"
+                      disabled={!selectedText || selectedText.blockIndex !== idx}
+                    >
+                      <Plus style={{ width: "1rem", height: "1rem", marginRight: "0.25rem" }} />
+                      Continue Story
+                    </Button>
+                  </div>
                 </div>
               )}
               {block.generating && !isGeneratingDocx && (
-                <div style={{ marginTop: "0.5rem", display: "flex", alignItems: "center" }}>
-                  <Spinner style={{ width: "1rem", height: "1rem", marginRight: "0.5rem" }} />
-                  <span>Generating text...</span>
+                <div style={{ 
+                  marginTop: "0.5rem", 
+                  display: "flex", 
+                  alignItems: "center",
+                  backgroundColor: "rgba(0, 0, 0, 0.05)",
+                  padding: "0.5rem",
+                  borderRadius: "0.25rem"
+                }}>
+                  <Spinner style={{ width: "1.5rem", height: "1.5rem", marginRight: "0.5rem", color: "#4B5563" }} />
+                  <span style={{ color: "#4B5563" }}>Generating text...</span>
                 </div>
               )}
               {block.context && (
@@ -1010,9 +1055,16 @@ function Page({
           return (
             <div key={idx} style={{ marginBottom: "1rem", position: "relative" }}>
               {block.generating ? (
-                <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "300px" }}>
-                  <Spinner />
-                  <span style={{ marginLeft: "0.5rem" }}>Generating image...</span>
+                <div style={{ 
+                  display: "flex", 
+                  justifyContent: "center", 
+                  alignItems: "center", 
+                  height: "300px",
+                  backgroundColor: "rgba(0, 0, 0, 0.05)",
+                  borderRadius: "0.5rem"
+                }}>
+                  <Spinner style={{ width: "2rem", height: "2rem", color: "#4B5563" }} />
+                  <span style={{ marginLeft: "0.5rem", color: "#4B5563" }}>Generating image...</span>
                 </div>
               ) : block.content ? (
                 <>
@@ -1041,6 +1093,13 @@ function Page({
           return null;
         }
       })}
+      {/* Remove or comment out the VideoGenerator component */}
+      {/* <VideoGenerator 
+        prompt={storyPrompt} 
+        onVideoGenerated={(videoUrl) => {
+          onAddVideo(videoUrl);
+        }} 
+      /> */}
     </div>
   );
 }

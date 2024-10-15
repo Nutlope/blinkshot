@@ -1,31 +1,50 @@
 import { NextResponse } from 'next/server';
-import Together from "together-ai";
+import { TogetherAI } from '@/lib/togetherAI'; // You'll need to create this
 
-const together = new Together({ apiKey: process.env.TOGETHER_API_KEY });
+const MAX_TOKENS = 500; // Adjust based on Together AI's limits
 
 export async function POST(req: Request) {
+  const { text, targetLanguage } = await req.json();
+
   try {
-    const body = await req.json();
-    const { content, targetLanguage } = body;
+    const togetherAI = new TogetherAI(process.env.TOGETHER_AI_API_KEY);
+    
+    // Split text into chunks
+    const chunks = splitTextIntoChunks(text, MAX_TOKENS);
+    
+    let translatedChunks = [];
+    for (const chunk of chunks) {
+      const prompt = `Translate the following text to ${targetLanguage}: "${chunk}"`;
+      const response = await togetherAI.generateText(prompt);
+      translatedChunks.push(response);
+    }
 
-    const response = await together.chat.completions.create({
-      messages: [
-        { role: "system", content: `You are a professional translator. Translate the following text to ${targetLanguage}. Maintain the original meaning, tone, and style as closely as possible.` },
-        { role: "user", content: content }
-      ],
-      model: "meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo",
-      max_tokens: 300,
-      temperature: 0.3,
-    });
-
-    const translatedText = response.choices[0]?.message?.content?.trim() || '';
-
+    const translatedText = translatedChunks.join(' ');
     return NextResponse.json({ translatedText });
   } catch (error) {
-    console.error('Error in translation:', error);
-    return NextResponse.json({ 
-      error: 'Failed to translate text', 
-      details: error instanceof Error ? error.message : 'Unknown error',
-    }, { status: 500 });
+    console.error('Error translating text:', error);
+    return NextResponse.json({ error: 'Failed to translate text' }, { status: 500 });
   }
+}
+
+function splitTextIntoChunks(text: string, maxTokens: number): string[] {
+  // Implement a function to split text into chunks of approximately maxTokens
+  // This is a simple implementation and might need refinement
+  const words = text.split(' ');
+  const chunks = [];
+  let currentChunk = [];
+
+  for (const word of words) {
+    if (currentChunk.length + word.length > maxTokens) {
+      chunks.push(currentChunk.join(' '));
+      currentChunk = [];
+    }
+    currentChunk.push(word);
+  }
+
+  if (currentChunk.length > 0) {
+    chunks.push(currentChunk.join(' '));
+  }
+
+  return chunks;
 }

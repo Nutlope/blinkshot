@@ -23,9 +23,15 @@ type EditableBookPreviewProps = {
   pages: PageContent[];
   language: string;
   updatePageContent: (pageIndex: number, newPage: PageContent) => void;
+  availableLanguages: string[];
 };
 
-const EditableBookPreview: React.FC<EditableBookPreviewProps> = ({ pages, language, updatePageContent }) => {
+const EditableBookPreview: React.FC<EditableBookPreviewProps> = ({ 
+  pages, 
+  language, 
+  updatePageContent,
+  availableLanguages
+}) => {
   const [isFullScreen, setIsFullScreen] = useState(false);
 
   const handleImageResize = (pageIndex: number, blockIndex: number, size: { width: number, height: number }) => {
@@ -37,6 +43,102 @@ const EditableBookPreview: React.FC<EditableBookPreviewProps> = ({ pages, langua
 
   const toggleFullScreen = () => {
     setIsFullScreen(!isFullScreen);
+  };
+
+  const renderBlock = (block: Block, pageIndex: number, blockIndex: number) => {
+    switch (block.type) {
+      case "text":
+        return (
+          <div key={blockIndex} style={{ marginBottom: "1rem" }}>
+            {block.content ? (
+              <>
+                <ReactQuill
+                  value={block.content}
+                  onChange={(content) => {
+                    const newPage = {...pages[pageIndex]};
+                    newPage.blocks[blockIndex].content = content;
+                    updatePageContent(pageIndex, newPage);
+                  }}
+                  modules={{
+                    toolbar: [
+                      ['bold', 'italic', 'underline'],
+                      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                      ['clean']
+                    ]
+                  }}
+                  style={{ 
+                    height: "auto", 
+                    marginBottom: "1rem",
+                    color: "#374151",
+                    fontSize: "1rem",
+                  }}
+                />
+                <TTSButton 
+                  text={block.content} 
+                  language={language} 
+                  availableLanguages={availableLanguages}
+                />
+              </>
+            ) : (
+              <div style={{ color: "#9CA3AF", fontStyle: "italic" }}>Empty text block</div>
+            )}
+          </div>
+        );
+      case "image":
+        return (
+          <div key={blockIndex} style={{ marginBottom: "1rem" }}>
+            {block.content ? (
+              <ResizableBox
+                width={block.width || 300}
+                height={block.height || 225}
+                onResize={(e, { size }) => {
+                  e.preventDefault();
+                  handleImageResize(pageIndex, blockIndex, size);
+                }}
+                minConstraints={[100, 75]}
+                maxConstraints={[600, 450]}
+                resizeHandles={['se']}
+                draggableOpts={{ 
+                  preventDefault: true, 
+                  stopPropagation: true 
+                }}
+              >
+                <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                  <Image
+                    src={`data:image/png;base64,${block.content.b64_json}`}
+                    alt=""
+                    layout="fill"
+                    objectFit="contain"
+                    style={{ borderRadius: "0.25rem", boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)" }}
+                  />
+                </div>
+              </ResizableBox>
+            ) : (
+              <div style={{ width: '100%', height: '200px', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f3f4f6', color: "#9CA3AF", fontStyle: "italic" }}>
+                Empty image block
+              </div>
+            )}
+          </div>
+        );
+      case "video":
+        return (
+          <div key={blockIndex} style={{ marginBottom: "1rem" }}>
+            {block.content ? (
+              <video 
+                src={block.content} 
+                controls 
+                style={{ maxWidth: "100%", borderRadius: "0.25rem" }}
+              />
+            ) : (
+              <div style={{ width: '100%', height: '200px', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f3f4f6', color: "#9CA3AF", fontStyle: "italic" }}>
+                Empty video block
+              </div>
+            )}
+          </div>
+        );
+      default:
+        return null;
+    }
   };
 
   const PreviewContent = () => (
@@ -82,58 +184,7 @@ const EditableBookPreview: React.FC<EditableBookPreviewProps> = ({ pages, langua
             <h3 style={{ fontSize: "1.2rem", marginBottom: "1rem", color: "#4b5563", textAlign: "center" }}>Page {pageIndex + 1}</h3>
             {page.blocks.map((block, blockIndex) => (
               <div key={blockIndex} style={{ marginBottom: "1rem" }}>
-                {block.type === "text" ? (
-                  <div>
-                    <ReactQuill
-                      value={block.content}
-                      onChange={(content) => {
-                        const newPage = {...page};
-                        newPage.blocks[blockIndex].content = content;
-                        updatePageContent(pageIndex, newPage);
-                      }}
-                      modules={{
-                        toolbar: [
-                          ['bold', 'italic', 'underline'],
-                          [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                          ['clean']
-                        ]
-                      }}
-                      style={{ 
-                        height: "auto", 
-                        marginBottom: "1rem",
-                        color: "#374151",
-                        fontSize: "1rem",
-                      }}
-                    />
-                    <TTSButton text={block.content} language={language} />
-                  </div>
-                ) : block.type === "image" && block.content ? (
-                  <ResizableBox
-                    width={block.width || 300}
-                    height={block.height || 225}
-                    onResize={(e, { size }) => {
-                      e.preventDefault();
-                      handleImageResize(pageIndex, blockIndex, size);
-                    }}
-                    minConstraints={[100, 75]}
-                    maxConstraints={[600, 450]}
-                    resizeHandles={['se']}
-                    draggableOpts={{ 
-                      preventDefault: true, 
-                      stopPropagation: true 
-                    }}
-                  >
-                    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-                      <Image
-                        src={`data:image/png;base64,${block.content.b64_json}`}
-                        alt=""
-                        layout="fill"
-                        objectFit="contain"
-                        style={{ borderRadius: "0.25rem", boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)" }}
-                      />
-                    </div>
-                  </ResizableBox>
-                ) : null}
+                {renderBlock(block, pageIndex, blockIndex)}
               </div>
             ))}
           </div>
