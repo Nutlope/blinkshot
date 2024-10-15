@@ -27,6 +27,7 @@
     "jspdf": "^2.5.2",
     "langchain": "^0.3.2",
     "lucide-react": "^0.447.0",
+    "microsoft-cognitiveservices-speech-sdk": "^1.40.0",
     "next": "14.2.14",
     "next-plausible": "^3.12.2",
     "react": "^18",

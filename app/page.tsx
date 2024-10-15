@@ -8,7 +8,7 @@ import { useDebouncedCallback } from "use-debounce";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Spinner from "@/components/spinner";
-import { Plus, Download, Trash2, Book, Newspaper, Film, Presentation, RefreshCw } from "lucide-react";
+import { Plus, Download, Trash2, Book, Newspaper, Film, Presentation, RefreshCw, Edit } from "lucide-react";
 import GithubIcon from "@/components/icons/github-icon";
 import XIcon from "@/components/icons/x-icon";
 import Logo from "@/components/logo";
