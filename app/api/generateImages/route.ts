@@ -4,42 +4,52 @@ import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { headers } from "next/headers";
 
-let options: ConstructorParameters<typeof Together>[0] = {};
 let ratelimit: Ratelimit | undefined;
 
-// Observability and rate limiting, if the API keys are set. If not, it skips.
-if (process.env.HELICONE_API_KEY) {
-  options.baseURL = "https://together.helicone.ai/v1";
-  options.defaultHeaders = {
-    "Helicone-Auth": `Bearer ${process.env.HELICONE_API_KEY}`,
-  };
-}
+// Add rate limiting if Upstash API keys are set, otherwise skip
 if (process.env.UPSTASH_REDIS_REST_URL) {
   ratelimit = new Ratelimit({
     redis: Redis.fromEnv(),
-    // Allow 60 requests per day
-    limiter: Ratelimit.fixedWindow(60, "1440 m"),
+    // Allow 100 requests per day (~5-10 prompts)
+    limiter: Ratelimit.fixedWindow(100, "1440 m"),
     analytics: true,
     prefix: "blinkshot",
   });
 }
 
-const client = new Together(options);
-
 export async function POST(req: Request) {
   let json = await req.json();
-  let { prompt } = z
+  let { prompt, userAPIKey, iterativeMode } = z
     .object({
       prompt: z.string(),
+      iterativeMode: z.boolean(),
+      userAPIKey: z.string().optional(),
     })
     .parse(json);
 
-  if (ratelimit) {
+  // Add observability if a Helicone key is specified, otherwise skip
+  let options: ConstructorParameters<typeof Together>[0] = {};
+  if (process.env.HELICONE_API_KEY) {
+    options.baseURL = "https://together.helicone.ai/v1";
+    options.defaultHeaders = {
+      "Helicone-Auth": `Bearer ${process.env.HELICONE_API_KEY}`,
+      "Helicone-Property-BYOK": userAPIKey ? "true" : "false",
+    };
+  }
+
+  const client = new Together(options);
+
+  if (userAPIKey) {
+    client.apiKey = userAPIKey;
+  }
+
+  if (ratelimit && !userAPIKey) {
     const identifier = getIPAddress();
+
     const { success } = await ratelimit.limit(identifier);
     if (!success) {
       return Response.json(
-        "You have no requests left, please try again in 24h.",
+        "No requests left. Please add your own API key or try again in 24h.",
         {
           status: 429,
         },
@@ -54,7 +64,8 @@ export async function POST(req: Request) {
       model: "black-forest-labs/FLUX.1-schnell",
       width: 1024,
       height: 768,
-      steps: 4,
+      seed: iterativeMode ? 123 : undefined,
+      steps: 3,
       // @ts-expect-error - this is not typed in the API
       response_format: "base64",
     });
