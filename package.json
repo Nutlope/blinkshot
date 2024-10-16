@@ -25,6 +25,7 @@
     "file-saver": "^2.0.5",
     "html2canvas": "^1.4.1",
     "jspdf": "^2.5.2",
+    "jszip": "^3.10.1",
     "langchain": "^0.3.2",
     "lucide-react": "^0.447.0",
     "microsoft-cognitiveservices-speech-sdk": "^1.40.0",
@@ -45,6 +46,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@types/jszip": "^3.4.1",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",

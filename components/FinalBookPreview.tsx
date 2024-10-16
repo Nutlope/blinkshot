@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { jsPDF } from 'jspdf';
+import { Document, Packer, Paragraph, TextRun, SectionType } from 'docx';
 import { Button } from "@/components/ui/button";
 import { Download } from 'lucide-react';
 import Image from 'next/image';
@@ -34,7 +35,7 @@ const FinalBookPreview: React.FC<FinalBookPreviewProps> = ({ pages, language }) 
     return tmp.textContent || tmp.innerText || '';
   };
 
-  const downloadBook = async () => {
+  const downloadPDF = async () => {
     const pdf = new jsPDF();
     let yOffset = 20;
 
@@ -74,6 +75,73 @@ const FinalBookPreview: React.FC<FinalBookPreviewProps> = ({ pages, language }) 
     pdf.save(`book_${language}.pdf`);
   };
 
+  const downloadDOCX = async () => {
+    const doc = new Document({
+      sections: [
+        {
+          properties: {},
+          children: pages.flatMap((page, pageIndex) => [
+            new Paragraph({
+              children: [new TextRun(`Page ${pageIndex + 1}`)],
+            }),
+            ...page.blocks.map((block) => {
+              if (block.type === 'text') {
+                return new Paragraph({
+                  children: [new TextRun(stripHtmlTags(block.content as string))],
+                });
+              } else if (block.type === 'image' && typeof block.content === 'object') {
+                // TODO: Implement image handling for DOCX
+                // This requires converting the base64 image to a buffer,
+                // saving it temporarily, and then adding it to the document using:
+                // doc.createImage(fs.readFileSync("path/to/image.png"))
+                return new Paragraph({
+                  children: [new TextRun('[Image Placeholder]')],
+                });
+              }
+              return new Paragraph({
+                children: [new TextRun('')],
+              });
+            }),
+          ]),
+        },
+      ],
+    });
+
+    const buffer = await Packer.toBuffer(doc);
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+    const link = document.createElement('a');
+    link.href = window.URL.createObjectURL(blob);
+    link.download = `book_${language}.docx`;
+    link.click();
+  };
+
+  const downloadEPUB = async () => {
+    try {
+      const response = await fetch('/api/generateEpub', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ pages, language }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate EPUB');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `book_${language}.epub`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading EPUB:', error);
+    }
+  };
+
   return (
     <div className="max-w-2xl mx-auto p-4">
       <h2 className="text-2xl font-bold mb-4">Final Book Preview ({language})</h2>
@@ -83,7 +151,10 @@ const FinalBookPreview: React.FC<FinalBookPreviewProps> = ({ pages, language }) 
             {block.type === 'text' && (
               <p className="text-black">{stripHtmlTags(block.content as string)}</p>
             )}
-            {block.type === 'image' && typeof block.content === 'object' && (
+            {block.type === 'image' && 
+             typeof block.content === 'object' && 
+             block.content !== null &&
+             'b64_json' in block.content && (
               <Image 
                 src={`data:image/png;base64,${block.content.b64_json}`}
                 alt={`Image ${index}`}
@@ -101,10 +172,18 @@ const FinalBookPreview: React.FC<FinalBookPreviewProps> = ({ pages, language }) 
         <span>{currentPage + 1} / {pages.length}</span>
         <Button onClick={nextPage} disabled={currentPage === pages.length - 1}>Next Page</Button>
       </div>
-      <div className="mt-4">
-        <Button onClick={downloadBook} className="w-full">
+      <div className="mt-4 space-y-2">
+        <Button onClick={downloadPDF} className="w-full">
           <Download className="w-4 h-4 mr-2" />
-          Download Book
+          Download as PDF
+        </Button>
+        <Button onClick={downloadDOCX} className="w-full">
+          <Download className="w-4 h-4 mr-2" />
+          Download as DOCX
+        </Button>
+        <Button onClick={downloadEPUB} className="w-full">
+          <Download className="w-4 h-4 mr-2" />
+          Download as EPUB
         </Button>
       </div>
     </div>
