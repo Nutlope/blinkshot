@@ -12,6 +12,7 @@ interface Block {
   type: 'text' | 'image';
   content: string | { b64_json: string } | null;
   size: 'small' | 'medium' | 'large';
+  column?: number;
 }
 
 interface Page {
@@ -100,17 +101,48 @@ const MagazinePreview: React.FC<MagazinePreviewProps> = ({ pages, language, upda
 
   const redistributeBlocks = (blocks: Block[], columns: number): Block[] => {
     const newBlocks: Block[] = [];
-    let currentColumn = 0;
+    let columnContents: string[] = Array(columns).fill('');
+    let columnHeights: number[] = Array(columns).fill(0);
+    const imageHeight = 200; // Assume a standard height for images
 
     blocks.forEach(block => {
-      if (block.size === 'large') {
-        // Large blocks always span all columns
-        newBlocks.push({ ...block, size: 'large' });
-        currentColumn = 0;
-      } else {
-        newBlocks.push({ ...block, size: 'small' });
-        currentColumn = (currentColumn + 1) % columns;
+      if (block.type === 'text') {
+        const words = (block.content as string).split(' ');
+        words.forEach(word => {
+          const shortestColumn = columnHeights.indexOf(Math.min(...columnHeights));
+          columnContents[shortestColumn] += word + ' ';
+          columnHeights[shortestColumn] += 20; // Assume 20px per word
+        });
+      } else if (block.type === 'image') {
+        const shortestColumn = columnHeights.indexOf(Math.min(...columnHeights));
+        newBlocks.push({
+          ...block,
+          size: 'small',
+          column: shortestColumn
+        });
+        columnHeights[shortestColumn] += imageHeight;
       }
+    });
+
+    // Create new text blocks from the redistributed content
+    columnContents.forEach((content, index) => {
+      if (content.trim()) {
+        newBlocks.push({
+          id: `redistributed-text-${index}`,
+          type: 'text',
+          content: content.trim(),
+          size: 'small',
+          column: index
+        });
+      }
+    });
+
+    // Sort blocks by column and height
+    newBlocks.sort((a, b) => {
+      if (a.column === b.column) {
+        return columnContents.indexOf(a.content as string) - columnContents.indexOf(b.content as string);
+      }
+      return (a.column || 0) - (b.column || 0);
     });
 
     return newBlocks;
@@ -177,7 +209,8 @@ const MagazinePreview: React.FC<MagazinePreviewProps> = ({ pages, language, upda
         <div className="magazine-grid" style={{
           display: 'grid',
           gridTemplateColumns: `repeat(${page.columns}, 1fr)`,
-          gap: '1rem'
+          gap: '1rem',
+          position: 'relative'
         }}>
           {page.blocks.map((block, blockIndex) => renderBlock(block, blockIndex, page.columns))}
         </div>
@@ -187,11 +220,12 @@ const MagazinePreview: React.FC<MagazinePreviewProps> = ({ pages, language, upda
 
   const renderBlock = useCallback((block: Block, index: number, columns: number) => (
     <div key={block.id} style={{ 
-      gridColumn: block.size === 'large' ? `span ${columns}` : 'auto',
+      gridColumn: block.column !== undefined ? `${block.column + 1}` : (block.size === 'large' ? `span ${columns}` : 'auto'),
       backgroundColor: 'rgba(255, 255, 255, 0.7)',
       padding: '15px',
       borderRadius: '4px',
-      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)'
+      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
+      marginBottom: '1rem'
     }}>
       {block.type === 'text' ? (
         <p 
