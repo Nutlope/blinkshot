@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import { jsPDF } from 'jspdf';
+import { Button } from "@/components/ui/button";
+import { Download } from 'lucide-react';
 import Image from 'next/image';
-import TTSButton from './TTSButton';
-
-type Block = {
-  type: string;
-  content: any;
-};
 
 type PageContent = {
-  blocks: Block[];
+  blocks: {
+    type: string;
+    content: string | { b64_json: string };
+  }[];
 };
 
 type FinalBookPreviewProps = {
@@ -17,89 +17,97 @@ type FinalBookPreviewProps = {
 };
 
 const FinalBookPreview: React.FC<FinalBookPreviewProps> = ({ pages, language }) => {
-  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
+  const bookRef = useRef<HTMLDivElement>(null);
 
-  const toggleFullScreen = () => {
-    setIsFullScreen(!isFullScreen);
+  const nextPage = () => {
+    setCurrentPage((prev) => Math.min(prev + 1, pages.length - 1));
   };
 
-  const PreviewContent = () => (
-    <div style={{ 
-      maxWidth: isFullScreen ? "none" : "600px", 
-      margin: "0 auto", 
-      backgroundColor: "#fff", 
-      boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)", 
-      borderRadius: "0.5rem", 
-      overflow: "hidden",
-      height: isFullScreen ? "100%" : "auto"
-    }}>
-      <div style={{ padding: "1rem", borderBottom: "1px solid #e5e7eb" }}>
-        <button 
-          onClick={toggleFullScreen}
-          style={{
-            padding: "0.5rem 1rem",
-            backgroundColor: "#4B5563",
-            color: "white",
-            border: "none",
-            borderRadius: "0.25rem",
-            cursor: "pointer"
-          }}
-        >
-          {isFullScreen ? "Exit Full Screen" : "Full Screen"}
-        </button>
-      </div>
-      {pages.map((page, pageIndex) => (
-        <div key={pageIndex} style={{ padding: "2rem", borderBottom: pageIndex < pages.length - 1 ? "1px solid #e5e7eb" : "none" }}>
-          <h3 style={{ fontSize: "1.2rem", marginBottom: "1rem", color: "#4b5563", textAlign: "center" }}>Page {pageIndex + 1}</h3>
-          {page.blocks.map((block, blockIndex) => (
-            <div key={blockIndex} style={{ marginBottom: "1rem" }}>
-              {block.type === "text" ? (
-                <div>
-                  <div dangerouslySetInnerHTML={{ __html: block.content }} style={{ 
-                    lineHeight: "1.6", 
-                    color: "#374151",
-                    fontSize: "1rem",
-                  }} />
-                  <TTSButton text={block.content} language={language} />
-                </div>
-              ) : block.type === "image" && block.content ? (
-                <div style={{ display: "flex", justifyContent: "center", marginTop: "1rem", marginBottom: "1rem" }}>
-                  <Image
-                    src={`data:image/png;base64,${block.content.b64_json}`}
-                    alt=""
-                    width={300}
-                    height={225}
-                    style={{ borderRadius: "0.25rem", maxWidth: "100%", height: "auto", boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)" }}
-                  />
-                </div>
-              ) : null}
-            </div>
-          ))}
-        </div>
-      ))}
-    </div>
-  );
+  const prevPage = () => {
+    setCurrentPage((prev) => Math.max(prev - 1, 0));
+  };
+
+  const stripHtmlTags = (html: string) => {
+    const tmp = document.createElement('DIV');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
+  };
+
+  const downloadBook = async () => {
+    const pdf = new jsPDF();
+    let yOffset = 20;
+
+    pages.forEach((page, pageIndex) => {
+      if (pageIndex > 0) {
+        pdf.addPage();
+        yOffset = 20;
+      }
+
+      pdf.setFontSize(16);
+      pdf.text(`Page ${pageIndex + 1}`, 20, yOffset);
+      yOffset += 10;
+
+      page.blocks.forEach((block) => {
+        if (block.type === 'text') {
+          const text = stripHtmlTags(block.content as string);
+          pdf.setFontSize(12);
+          const splitText = pdf.splitTextToSize(text, 170);
+          pdf.text(splitText, 20, yOffset);
+          yOffset += 7 * splitText.length;
+        } else if (block.type === 'image' && typeof block.content === 'object') {
+          try {
+            pdf.addImage(`data:image/png;base64,${block.content.b64_json}`, 'PNG', 20, yOffset, 170, 100);
+            yOffset += 110;
+          } catch (error) {
+            console.error('Error adding image to PDF:', error);
+          }
+        }
+
+        if (yOffset > 280) {
+          pdf.addPage();
+          yOffset = 20;
+        }
+      });
+    });
+
+    pdf.save(`book_${language}.pdf`);
+  };
 
   return (
-    <>
-      {isFullScreen ? (
-        <div style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: "100vw",
-          height: "100vh",
-          backgroundColor: "rgba(0, 0, 0, 0.8)",
-          zIndex: 1000,
-          overflow: "auto",
-          padding: "2rem"
-        }}>
-          <PreviewContent />
-        </div>
-      ) : (
-        <PreviewContent />
-      )}
-    </>
+    <div className="max-w-2xl mx-auto p-4">
+      <h2 className="text-2xl font-bold mb-4">Final Book Preview ({language})</h2>
+      <div ref={bookRef} className="bg-white p-4 shadow-lg mb-4 min-h-[400px]">
+        {pages[currentPage].blocks.map((block, index) => (
+          <div key={index} className="mb-4">
+            {block.type === 'text' && (
+              <p className="text-black">{stripHtmlTags(block.content as string)}</p>
+            )}
+            {block.type === 'image' && typeof block.content === 'object' && (
+              <Image 
+                src={`data:image/png;base64,${block.content.b64_json}`}
+                alt={`Image ${index}`}
+                width={300}
+                height={200}
+                layout="responsive"
+                className="max-w-full h-auto"
+              />
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="flex justify-between items-center mb-4">
+        <Button onClick={prevPage} disabled={currentPage === 0}>Previous Page</Button>
+        <span>{currentPage + 1} / {pages.length}</span>
+        <Button onClick={nextPage} disabled={currentPage === pages.length - 1}>Next Page</Button>
+      </div>
+      <div className="mt-4">
+        <Button onClick={downloadBook} className="w-full">
+          <Download className="w-4 h-4 mr-2" />
+          Download Book
+        </Button>
+      </div>
+    </div>
   );
 };
 

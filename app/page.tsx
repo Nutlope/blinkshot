@@ -23,6 +23,8 @@ import FinalBookPreview from '@/components/FinalBookPreview';
 import FAB from '@/components/ui/FAB';
 import SlideshowPreview from '@/components/SlideshowPreview';
 import ComicPreview from '@/components/ComicPreview';
+import YoutubeThumbnailDesigner from '@/components/YoutubeThumbnailDesigner';
+import SocialMediaDesigner from '@/components/SocialMediaDesigner';
 // Remove or comment out the VideoGenerator import
 // import VideoGenerator from '@/components/VideoGenerator';
 
@@ -94,6 +96,8 @@ export default function Home() {
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
   const formatMenuRef = useRef<HTMLDivElement>(null);
   const [availableLanguages, setAvailableLanguages] = useState(['English']); // Add this line
+  const [showYoutubeThumbnailDesigner, setShowYoutubeThumbnailDesigner] = useState(false);
+  const [showSocialMediaDesigner, setShowSocialMediaDesigner] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -273,6 +277,11 @@ export default function Home() {
   const handleSelectFormat = (format: string) => {
     setSelectedFormat(format);
     setShowNewPreviews(true);
+    if (format === 'youtube') {
+      setShowYoutubeThumbnailDesigner(true);
+    } else if (format === 'social') {
+      setShowSocialMediaDesigner(true);
+    }
   };
 
   // Close the format menu when clicking outside
@@ -313,6 +322,25 @@ export default function Home() {
         speechBubble: block.type === 'text' && Math.random() > 0.5, // Randomly make some text blocks speech bubbles
       }))
     }));
+  };
+
+  // Function to get the current content
+  const getCurrentContent = () => {
+    const currentVersion = languageVersions.find(v => v.language === activeLanguage);
+    if (!currentVersion || !currentVersion.pages.length) return null;
+
+    const textContent = currentVersion.pages
+      .flatMap(page => page.blocks)
+      .filter(block => block.type === 'text')
+      .map(block => block.content)
+      .join('\n');
+
+    const imageContent = currentVersion.pages
+      .flatMap(page => page.blocks)
+      .filter(block => block.type === 'image' && block.content)
+      .map(block => `data:image/png;base64,${(block as any).content.b64_json}`);
+
+    return { text: textContent, images: imageContent };
   };
 
   return (
@@ -524,6 +552,34 @@ export default function Home() {
                       <SlideshowPreview
                         pages={languageVersions.find(v => v.language === activeLanguage)?.pages || []}
                         language={activeLanguage}
+                      />
+                    </div>
+                  )}
+                  {selectedFormat === 'youtube' && showYoutubeThumbnailDesigner && (
+                    <div style={{ flex: 1, margin: "1rem" }}>
+                      <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem", color: "#1f2937", textAlign: "center" }}>YouTube Thumbnail Designer</h2>
+                      <YoutubeThumbnailDesigner
+                        initialContent={getCurrentContent()}
+                        onSave={(thumbnailUrl) => {
+                          console.log('Thumbnail saved:', thumbnailUrl);
+                          // Here you can handle the saved thumbnail, e.g., add it to your pages or display it
+                          setShowYoutubeThumbnailDesigner(false);
+                        }}
+                        onCancel={() => setShowYoutubeThumbnailDesigner(false)}
+                      />
+                    </div>
+                  )}
+                  {selectedFormat === 'social' && showSocialMediaDesigner && (
+                    <div style={{ flex: 1, margin: "1rem" }}>
+                      <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem", color: "#1f2937", textAlign: "center" }}>Social Media Designer</h2>
+                      <SocialMediaDesigner
+                        initialContent={getCurrentContent()}
+                        onSave={(designUrl) => {
+                          console.log('Social media design saved:', designUrl);
+                          // Handle the saved design
+                          setShowSocialMediaDesigner(false);
+                        }}
+                        onCancel={() => setShowSocialMediaDesigner(false)}
                       />
                     </div>
                   )}

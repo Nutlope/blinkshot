@@ -1,96 +1,58 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Book, Newspaper, Film, Presentation } from "lucide-react";
+import React, { useState } from 'react';
+import { Plus, Book, Newspaper, Film, Presentation, Youtube, Share2 } from 'lucide-react';
 
 type FABProps = {
   onSelectFormat: (format: string) => void;
 };
 
 const FAB: React.FC<FABProps> = ({ onSelectFormat }) => {
-  const [showFormatMenu, setShowFormatMenu] = useState(false);
-  const formatMenuRef = useRef<HTMLDivElement>(null);
+  const [isOpen, setIsOpen] = useState(false);
 
-  const toggleFormatMenu = () => {
-    setShowFormatMenu(!showFormatMenu);
+  const toggleMenu = () => {
+    setIsOpen(!isOpen);
   };
 
-  const selectFormat = (format: string) => {
+  const handleSelectFormat = (format: string) => {
     onSelectFormat(format);
-    setShowFormatMenu(false);
-  };
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (formatMenuRef.current && !formatMenuRef.current.contains(event.target as Node)) {
-        setShowFormatMenu(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-  const formatButtonStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    padding: '0.5rem',
-    border: 'none',
-    background: 'none',
-    cursor: 'pointer',
-    width: '100%',
-    textAlign: 'left' as const,
-    color: '#4B5563',
+    setIsOpen(false);
   };
 
   return (
-    <div style={{ position: "fixed", bottom: "2rem", right: "2rem", zIndex: 1000 }}>
-      <button 
-        onClick={toggleFormatMenu}
-        style={{
-          width: "3.5rem",
-          height: "3.5rem",
-          borderRadius: "50%",
-          backgroundColor: "#4B5563",
-          color: "white",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          border: "none",
-          cursor: "pointer",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
-          transition: "all 0.3s ease",
-        }}
-      >
-        <Plus size={24} />
-      </button>
-      {showFormatMenu && (
-        <div 
-          ref={formatMenuRef}
-          style={{
-            position: "absolute",
-            bottom: "4rem",
-            right: 0,
-            backgroundColor: "white",
-            borderRadius: "0.5rem",
-            boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-            padding: "0.5rem",
-          }}
-        >
-          <button onClick={() => selectFormat('book')} style={formatButtonStyle}>
-            <Book size={18} style={{ marginRight: '0.5rem' }} /> Book
+    <div className="fixed bottom-4 right-4 z-50">
+      {isOpen && (
+        <div className="absolute bottom-16 right-0 bg-black rounded-lg shadow-lg p-2 flex flex-col space-y-2 border border-gray-700">
+          <button onClick={() => handleSelectFormat('book')} className="flex items-center space-x-2 px-4 py-2 hover:bg-gray-800 rounded text-green-400 transition-colors">
+            <Book size={20} />
+            <span>Book</span>
           </button>
-          <button onClick={() => selectFormat('magazine')} style={formatButtonStyle}>
-            <Newspaper size={18} style={{ marginRight: '0.5rem' }} /> Magazine
+          <button onClick={() => handleSelectFormat('magazine')} className="flex items-center space-x-2 px-4 py-2 hover:bg-gray-800 rounded text-green-400 transition-colors">
+            <Newspaper size={20} />
+            <span>Magazine</span>
           </button>
-          <button onClick={() => selectFormat('comic')} style={formatButtonStyle}>
-            <Film size={18} style={{ marginRight: '0.5rem' }} /> Comic
+          <button onClick={() => handleSelectFormat('comic')} className="flex items-center space-x-2 px-4 py-2 hover:bg-gray-800 rounded text-green-400 transition-colors">
+            <Film size={20} />
+            <span>Comic</span>
           </button>
-          <button onClick={() => selectFormat('slideshow')} style={formatButtonStyle}>
-            <Presentation size={18} style={{ marginRight: '0.5rem' }} /> Slideshow
+          <button onClick={() => handleSelectFormat('slideshow')} className="flex items-center space-x-2 px-4 py-2 hover:bg-gray-800 rounded text-green-400 transition-colors">
+            <Presentation size={20} />
+            <span>Slideshow</span>
+          </button>
+          <button onClick={() => handleSelectFormat('youtube')} className="flex items-center space-x-2 px-4 py-2 hover:bg-gray-800 rounded text-green-400 transition-colors">
+            <Youtube size={20} />
+            <span>YouTube Thumbnail</span>
+          </button>
+          <button onClick={() => handleSelectFormat('social')} className="flex items-center space-x-2 px-4 py-2 hover:bg-gray-800 rounded text-green-400 transition-colors">
+            <Share2 size={20} />
+            <span>Social Media</span>
           </button>
         </div>
       )}
+      <button
+        onClick={toggleMenu}
+        className="bg-blue-500 hover:bg-blue-600 text-white rounded-full p-4 shadow-lg transition-colors"
+      >
+        <Plus size={24} />
+      </button>
     </div>
   );
 };
