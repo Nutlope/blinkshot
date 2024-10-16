@@ -1,9 +1,10 @@
 import React, { useState, useRef } from 'react';
 import { jsPDF } from 'jspdf';
-import { Document, Packer, Paragraph, TextRun, SectionType } from 'docx';
+import { Document, Packer, Paragraph, TextRun, SectionType, ImageRun, IImageOptions } from 'docx';
 import { Button } from "@/components/ui/button";
 import { Download } from 'lucide-react';
 import Image from 'next/image';
+import { Buffer } from 'buffer';
 
 type PageContent = {
   blocks: {
@@ -76,33 +77,56 @@ const FinalBookPreview: React.FC<FinalBookPreviewProps> = ({ pages, language }) 
   };
 
   const downloadDOCX = async () => {
+    const children = await Promise.all(pages.flatMap(async (page, pageIndex) => {
+      const pageChildren = [
+        new Paragraph({
+          children: [new TextRun({ text: `Page ${pageIndex + 1}`, bold: true, size: 24 })],
+        }),
+      ];
+
+      for (const block of page.blocks) {
+        if (block.type === 'text') {
+          pageChildren.push(
+            new Paragraph({
+              children: [new TextRun(stripHtmlTags(block.content as string))],
+            })
+          );
+        } else if (block.type === 'image' && typeof block.content === 'object') {
+          try {
+            const base64Data = (block.content as { b64_json: string }).b64_json.split(',')[1];
+            const buffer = Buffer.from(base64Data, 'base64');
+            pageChildren.push(
+              new Paragraph({
+                children: [
+                  new ImageRun({
+                    data: buffer,
+                    transformation: {
+                      width: 500,
+                      height: 300,
+                    },
+                  } as IImageOptions),
+                ],
+              })
+            );
+          } catch (error) {
+            console.error('Error adding image to DOCX:', error);
+            pageChildren.push(
+              new Paragraph({
+                children: [new TextRun('[Image Placeholder]')],
+              })
+            );
+          }
+        }
+      }
+
+      return pageChildren;
+    }));
+
     const doc = new Document({
       sections: [
         {
           properties: {},
-          children: pages.flatMap((page, pageIndex) => [
-            new Paragraph({
-              children: [new TextRun(`Page ${pageIndex + 1}`)],
-            }),
-            ...page.blocks.map((block) => {
-              if (block.type === 'text') {
-                return new Paragraph({
-                  children: [new TextRun(stripHtmlTags(block.content as string))],
-                });
-              } else if (block.type === 'image' && typeof block.content === 'object') {
-                // TODO: Implement image handling for DOCX
-                // This requires converting the base64 image to a buffer,
-                // saving it temporarily, and then adding it to the document using:
-                // doc.createImage(fs.readFileSync("path/to/image.png"))
-                return new Paragraph({
-                  children: [new TextRun('[Image Placeholder]')],
-                });
-              }
-              return new Paragraph({
-                children: [new TextRun('')],
-              });
-            }),
-          ]),
+          children: children.flat(),
         },
       ],
     });
