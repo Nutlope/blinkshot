@@ -1,15 +1,14 @@
 import React, { useState, useRef } from 'react';
 import { jsPDF } from 'jspdf';
-import { Document, Packer, Paragraph, TextRun, SectionType, ImageRun, IImageOptions } from 'docx';
+import { Document, Packer, Paragraph, TextRun, ImageRun, IImageOptions } from 'docx';
 import { Button } from "@/components/ui/button";
-import { Download } from 'lucide-react';
+import { Download, Maximize, Minimize } from 'lucide-react';
 import Image from 'next/image';
-import { Buffer } from 'buffer';
 
 type PageContent = {
   blocks: {
     type: string;
-    content: string | { b64_json: string };
+    content: string | { b64_json: string } | null;
   }[];
 };
 
@@ -20,6 +19,7 @@ type FinalBookPreviewProps = {
 
 const FinalBookPreview: React.FC<FinalBookPreviewProps> = ({ pages, language }) => {
   const [currentPage, setCurrentPage] = useState(0);
+  const [isFullScreen, setIsFullScreen] = useState(false);
   const bookRef = useRef<HTMLDivElement>(null);
 
   const nextPage = () => {
@@ -166,19 +166,41 @@ const FinalBookPreview: React.FC<FinalBookPreviewProps> = ({ pages, language }) 
     }
   };
 
-  return (
-    <div className="max-w-2xl mx-auto p-4">
-      <h2 className="text-2xl font-bold mb-4">Final Book Preview ({language})</h2>
-      <div ref={bookRef} className="bg-white p-4 shadow-lg mb-4 min-h-[400px]">
+  const toggleFullScreen = () => {
+    setIsFullScreen(!isFullScreen);
+  };
+
+  const PreviewContent = () => (
+    <div className={`mx-auto ${isFullScreen ? 'max-w-4xl' : 'max-w-2xl'}`}>
+      <div style={{ 
+        marginBottom: '20px', 
+        display: 'flex', 
+        alignItems: 'center', 
+        backgroundColor: '#4CAF50', 
+        padding: '10px', 
+        borderRadius: '4px' 
+      }}>
+        <h2 style={{ 
+          fontSize: isFullScreen ? '2rem' : '1.5rem', 
+          fontWeight: 'bold', 
+          color: 'black', 
+          margin: 0,
+          flexGrow: 1
+        }}>
+          Final Book Preview ({language})
+        </h2>
+        <Button onClick={toggleFullScreen} style={{ marginLeft: '10px' }}>
+          {isFullScreen ? <Minimize size={16} /> : <Maximize size={16} />}
+          {isFullScreen ? 'Exit Full Screen' : 'Full Screen'}
+        </Button>
+      </div>
+      <div ref={bookRef} className={`bg-white p-4 shadow-lg mb-4 ${isFullScreen ? 'min-h-[80vh]' : 'min-h-[400px]'}`}>
         {pages[currentPage].blocks.map((block, index) => (
           <div key={index} className="mb-4">
             {block.type === 'text' && (
               <p className="text-black">{stripHtmlTags(block.content as string)}</p>
             )}
-            {block.type === 'image' && 
-             typeof block.content === 'object' && 
-             block.content !== null &&
-             'b64_json' in block.content && (
+            {block.type === 'image' && block.content && typeof block.content === 'object' && 'b64_json' in block.content ? (
               <Image 
                 src={`data:image/png;base64,${block.content.b64_json}`}
                 alt={`Image ${index}`}
@@ -187,7 +209,9 @@ const FinalBookPreview: React.FC<FinalBookPreviewProps> = ({ pages, language }) 
                 layout="responsive"
                 className="max-w-full h-auto"
               />
-            )}
+            ) : block.type === 'image' ? (
+              <p>Image not available</p>
+            ) : null}
           </div>
         ))}
       </div>
@@ -210,6 +234,16 @@ const FinalBookPreview: React.FC<FinalBookPreviewProps> = ({ pages, language }) 
           Download as EPUB
         </Button>
       </div>
+    </div>
+  );
+
+  return (
+    <div className={`p-4 ${
+      isFullScreen 
+        ? 'fixed inset-0 z-50 bg-gray-100 overflow-auto flex items-start justify-center' 
+        : 'mx-auto'
+    }`}>
+      <PreviewContent />
     </div>
   );
 };
