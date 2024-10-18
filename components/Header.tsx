@@ -21,9 +21,7 @@ const Header: React.FC<HeaderProps> = ({ userAPIKey, setUserAPIKey }) => {
             transition={{ duration: 0.5 }}
             className="flex items-center"
           >
-            <a href='https://www.dub.sh/together-ai' target='_blank' rel='noopener noreferrer' className="mr-4">
-              <Logo className="w-12 h-12" />
-            </a>
+        
             <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
               Story<span className="text-yellow-300">Forge</span>
             </h1>
@@ -35,30 +33,7 @@ const Header: React.FC<HeaderProps> = ({ userAPIKey, setUserAPIKey }) => {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="relative"
           >
-            <Input
-              placeholder='Enter your Together API Key'
-              type={isHovered ? 'text' : 'password'}
-              value={userAPIKey}
-              className="w-64 sm:w-80 bg-white/10 border-white/20 text-white placeholder-white/50 focus:ring-2 focus:ring-yellow-300"
-              onChange={(e) => setUserAPIKey(e.target.value)}
-              onMouseEnter={() => setIsHovered(true)}
-              onMouseLeave={() => setIsHovered(false)}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3 }}
-              className="absolute -top-8 left-0 text-xs text-yellow-300"
-            >
-              <a
-                href='https://api.together.xyz/settings/api-keys'
-                target='_blank'
-                rel='noopener noreferrer'
-                className="hover:underline"
-              >
-                Get your API Key
-              </a>
-            </motion.div>
+           
           </motion.div>
         </div>
         

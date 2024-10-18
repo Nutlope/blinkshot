@@ -8,14 +8,16 @@ export async function POST(req: Request) {
 
     const llm = new TogetherAI({
       apiKey: process.env.TOGETHER_API_KEY,
-      model: "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
-      maxTokens: 256,
-      temperature: 0.7,
+      model: "google/gemma-2-27b-it",
+      maxTokens: 1024,
+      temperature: 0.1,
     });
 
     const promptTemplate = PromptTemplate.fromTemplate(
-      "You are a professional translator. Translate the following text from {sourceLanguage} to {targetLanguage}:\n\n" +
-      "{text}\n\n" +
+      "You are a professional translator. Translate the following text from {sourceLanguage} to {targetLanguage}. " +
+      "Provide only the translated text without any additional comments, explanations, or notes. " +
+      "Maintain the original formatting, including line breaks and paragraph structure.\n\n" +
+      "Text to translate:\n{text}\n\n" +
       "Translation:"
     );
 

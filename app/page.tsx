@@ -25,6 +25,10 @@ import { translatePageContent, translateAllContent, updateTranslation } from '@/
 import debounce from 'lodash/debounce';
 import { Button } from "@/components/ui/button";
 import TranslationProgressIndicator from '@/components/TranslationProgressIndicator';
+import { Globe } from 'lucide-react'; // Import the Globe icon
+import { createHash } from 'crypto';
+import { useTranslation } from '@/hooks/useTranslation';
+import { generateText } from '@/lib/together'; // Import the generateText function
 
 // Use dynamic import for MagazinePreview
 const MagazinePreview = dynamic(() => import('@/components/MagazinePreview'), { ssr: false });
@@ -49,9 +53,6 @@ export default function Home() {
   const [imageCount, setImageCount] = useState(1);
   const [languages, setLanguages] = useState<string[]>(['English']);
   const [activeLanguage, setActiveLanguage] = useState<string>('English');
-  const [languageVersions, setLanguageVersions] = useState<LanguageVersion[]>([
-    { language: 'English', pages: [] },
-  ]);
   const [activePreview, setActivePreview] = useState<string>('book');
   const [targetLanguages, setTargetLanguages] = useState<string[]>(['English']);
   const availableLanguages = [
@@ -78,9 +79,18 @@ export default function Home() {
   ];
   const [pendingTranslations, setPendingTranslations] = useState<{[key: string]: boolean}>({});
   const translationCache = useRef<{[key: string]: {[key: string]: string}}>({});
-  const [translationProgress, setTranslationProgress] = useState(0);
-  const [isTranslating, setIsTranslating] = useState(false);
   const [showLanguageSelector, setShowLanguageSelector] = useState(false);
+  const [contentHashes, setContentHashes] = useState<{ [key: string]: string }>({});
+  const defaultLanguage = 'English';
+
+  const {
+    languageVersions,
+    setLanguageVersions,
+    isTranslating,
+    translationProgress,
+    translateAllContent,
+    addNewContent,
+  } = useTranslation([{ language: defaultLanguage, pages: [] }], defaultLanguage);
 
   useEffect(() => {
     return () => {
@@ -147,65 +157,16 @@ export default function Home() {
       return updatedVersions;
     });
 
-    // Queue translation for other languages
-    targetLanguages.forEach(targetLang => {
-      if (targetLang !== language) {
-        setPendingTranslations(prev => ({...prev, [`${pageIndex}-${targetLang}`]: true}));
-        debouncedTranslate(language, pageIndex, newContent);
-      }
-    });
+    // Remove automatic translation here
   };
 
-  const translateContent = async (sourceLanguage: string, pageIndex: number, content: PageContent) => {
-    for (const targetLang of targetLanguages) {
-      if (targetLang !== sourceLanguage) {
-        const cacheKey = `${sourceLanguage}-${targetLang}-${pageIndex}`;
-        const cachedTranslation = translationCache.current[cacheKey];
-
-        if (cachedTranslation) {
-          updateTranslation(targetLang, pageIndex, cachedTranslation, setLanguageVersions);
-        } else {
-          try {
-            const translatedContent = await translatePageContent(content, sourceLanguage, targetLang);
-            translationCache.current[cacheKey] = translatedContent;
-            updateTranslation(targetLang, pageIndex, translatedContent, setLanguageVersions);
-          } catch (error) {
-            console.error('Translation error:', error);
-          }
-        }
-
-        setPendingTranslations(prev => ({...prev, [`${pageIndex}-${targetLang}`]: false}));
-      }
-    }
+  const hashContent = (content: string): string => {
+    return createHash('md5').update(content).digest('hex');
   };
 
-  const handleTranslateAllContent = async () => {
-    setIsTranslating(true);
-    setTranslationProgress(0);
-    const sourceLanguage = 'English'; // Assuming English is the source language
-    const currentVersion = languageVersions.find(v => v.language === sourceLanguage);
-    
-    if (!currentVersion) {
-      console.error('Source language version not found');
-      setIsTranslating(false);
-      return;
-    }
-
-    const totalPages = currentVersion.pages.length * (targetLanguages.length - 1);
-    let translatedPages = 0;
-
-    for (const targetLang of targetLanguages) {
-      if (targetLang !== sourceLanguage) {
-        for (let i = 0; i < currentVersion.pages.length; i++) {
-          const translatedContent = await translatePageContent(currentVersion.pages[i], sourceLanguage, targetLang);
-          updateTranslation(targetLang, i, translatedContent, setLanguageVersions);
-          translatedPages++;
-          setTranslationProgress((translatedPages / totalPages) * 100);
-        }
-      }
-    }
-
-    setIsTranslating(false);
+  const handleTranslateAllContent = () => {
+    console.log("Translate All Content button clicked"); // Add this log
+    translateAllContent('English', targetLanguages.filter(lang => lang !== 'English'));
   };
 
   // Function to download the book (implementation can be added)
@@ -428,6 +389,25 @@ export default function Home() {
     setShowLanguageSelector(true);
   };
 
+  const handleDismissLanguageSelector = () => {
+    setShowLanguageSelector(false);
+  };
+
+  const generateContent = async (pageIndex: number, selectedText: string) => {
+    const currentVersion = languageVersions.find(v => v.language === defaultLanguage);
+    if (!currentVersion) return '';
+
+    const previousContent = currentVersion.pages
+      .slice(0, pageIndex + 1)
+      .flatMap(page => page.blocks)
+      .filter(block => block.type === 'text')
+      .map(block => block.content)
+      .join('\n');
+
+    const newContent = await generateText(selectedText, storyPrompt, previousContent, defaultLanguage);
+    return newContent;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-100 to-blue-200">
       <Header userAPIKey={userAPIKey} setUserAPIKey={setUserAPIKey} />
@@ -450,11 +430,6 @@ export default function Home() {
 
           <div className="grid md:grid-cols-3 gap-8 mb-16">
             <FeatureCard
-              icon="🚀"
-              title="10x Faster Creation"
-              description="Generate complete, high-quality stories in minutes with our advanced AI technology"
-            />
-            <FeatureCard
               icon="🌍"
               title="Global Reach"
               description="Instantly translate your stories into multiple languages, expanding your audience worldwide"
@@ -463,6 +438,11 @@ export default function Home() {
               icon="📚"
               title="Multi-Format Export"
               description="Publish your stories as books, comics, magazines, or slideshows with a single click"
+            />
+            <FeatureCard
+              icon="🚀"
+              title="10x Faster Creation"
+              description="Generate complete, high-quality stories in minutes with our advanced AI technology"
             />
           </div>
 
@@ -523,27 +503,32 @@ export default function Home() {
       ) : (
         <>
           <div className="container mx-auto px-4 py-8">
-            <Button
-              onClick={handleShowTranslationOptions}
-              className="mb-4 bg-indigo-600 text-white"
-            >
-              Translate to Other Languages
-            </Button>
+            {!showLanguageSelector && (
+              <Button
+                onClick={handleShowTranslationOptions}
+                className="mb-4 bg-indigo-600 hover:bg-green-600 text-white flex items-center transition-colors duration-300"
+              >
+                <Globe className="mr-2" size={20} />
+                Translate to Other Languages
+              </Button>
+            )}
             
             {showLanguageSelector && (
               <LanguageSelector
                 availableLanguages={availableLanguages}
                 targetLanguages={targetLanguages}
                 setTargetLanguages={setTargetLanguages}
+                onDismiss={handleDismissLanguageSelector}
               />
             )}
             
             {showLanguageSelector && (
               <Button
                 onClick={handleTranslateAllContent}
-                className="mb-4 bg-indigo-600 text-white"
+                className="mb-4 bg-indigo-600 hover:bg-green-600 text-white transition-colors duration-300"
+                disabled={isTranslating}
               >
-                Start Translation
+                {isTranslating ? 'Translating...' : 'Translate All Content'}
               </Button>
             )}
             
@@ -553,6 +538,8 @@ export default function Home() {
                 <EditingPanel
                   languageVersions={languageVersions}
                   activeLanguage={activeLanguage}
+                  setActiveLanguage={setActiveLanguage}
+                  defaultLanguage={defaultLanguage}
                   addNewPage={addNewPage}
                   imageCount={imageCount}
                   setImageCount={setImageCount}
@@ -562,6 +549,7 @@ export default function Home() {
                   iterativeMode={iterativeMode}
                   isGeneratingDocx={isGeneratingDocx}
                   storyPrompt={storyPrompt}
+                  generateContent={generateContent}
                 />
               </div>
 

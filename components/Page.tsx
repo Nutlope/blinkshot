@@ -18,6 +18,7 @@ const Page: React.FC<PageProps> = ({
   imageCount,
   onDeletePage,
   onAddVideo,
+  onContinueStory,
 }) => {
   const [blocks, setBlocks] = useState<ContentBlock[]>(page.blocks);
   const [selectedText, setSelectedText] = useState<{ blockIndex: number; text: string } | null>(null);
@@ -339,6 +340,11 @@ const Page: React.FC<PageProps> = ({
     };
   }, []);
 
+  const handleContinueStory = () => {
+    const selectedText = window.getSelection()?.toString() || '';
+    onContinueStory(selectedText);
+  };
+
   return (
     <div
       className="book-page"
@@ -435,7 +441,7 @@ const Page: React.FC<PageProps> = ({
                       Reset Page
                     </Button>
                     <Button
-                      onClick={() => addBlock('text', idx)}
+                      onClick={handleContinueStory}
                       size="sm"
                       disabled={!selectedText || selectedText.blockIndex !== idx}
                     >

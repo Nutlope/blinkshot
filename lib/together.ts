@@ -2,23 +2,24 @@ import axios from 'axios';
 
 const TOGETHER_API_URL = 'https://api.together.xyz/v1/completions';
 
-export async function generateText(prompt: string): Promise<string> {
-  try {
-    const response = await axios.post(TOGETHER_API_URL, {
-      model: 'togethercomputer/llama-2-70b-chat',
-      prompt: prompt,
-      max_tokens: 256,
-      temperature: 0.7,
-    }, {
-      headers: {
-        'Authorization': `Bearer ${process.env.TOGETHER_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-    });
+export async function generateText(prompt: string, storyPrompt: string, previousContent: string, language: string): Promise<string> {
+  const response = await fetch('/api/generateText', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      prompt,
+      storyPrompt,
+      previousContent,
+      language,
+    }),
+  });
 
-    return response.data.choices[0].text.trim();
-  } catch (error) {
-    console.error('Error generating text:', error);
+  if (!response.ok) {
     throw new Error('Failed to generate text');
   }
+
+  const data = await response.json();
+  return data.text;
 }

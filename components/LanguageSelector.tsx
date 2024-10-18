@@ -1,16 +1,20 @@
 import React from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button';
+import { X } from 'lucide-react'; // Import the X icon
 
 interface LanguageSelectorProps {
   availableLanguages: string[];
   targetLanguages: string[];
   setTargetLanguages: (languages: string[]) => void;
+  onDismiss: () => void; // Add this prop
 }
 
 const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   availableLanguages,
   targetLanguages,
   setTargetLanguages,
+  onDismiss, // Add this prop
 }) => {
   const handleLanguageToggle = (language: string) => {
     if (targetLanguages.includes(language)) {
@@ -21,7 +25,14 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   };
 
   return (
-    <div className="mb-4 p-6 bg-white rounded-lg shadow-lg border border-gray-200">
+    <div className="mb-4 p-6 bg-white rounded-lg shadow-lg border border-gray-200 relative">
+      <Button
+        onClick={onDismiss}
+        className="absolute top-2 right-2 p-1 bg-green-500 hover:bg-green-600 text-white"
+        variant="ghost"
+      >
+        <X size={20} />
+      </Button>
       <h3 className="text-xl font-bold mb-4 text-black">Select Target Languages</h3>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
         {availableLanguages.map((lang) => (
