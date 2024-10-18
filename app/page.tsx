@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import StoryPromptInput from '@/components/StoryPromptInput';
@@ -21,7 +21,10 @@ import { saveAs } from 'file-saver';
 import Image from 'next/image';
 import TranslationManager from '@/components/TranslationManager';
 import PreviewSelector from '@/components/PreviewSelector';
-import { translateText } from '@/lib/translate'; // We'll create this utility function
+import { translatePageContent, translateAllContent, updateTranslation } from '@/lib/translationHelpers';
+import debounce from 'lodash/debounce';
+import { Button } from "@/components/ui/button";
+import TranslationProgressIndicator from '@/components/TranslationProgressIndicator';
 
 // Use dynamic import for MagazinePreview
 const MagazinePreview = dynamic(() => import('@/components/MagazinePreview'), { ssr: false });
@@ -51,7 +54,33 @@ export default function Home() {
   ]);
   const [activePreview, setActivePreview] = useState<string>('book');
   const [targetLanguages, setTargetLanguages] = useState<string[]>(['English']);
-  const availableLanguages = ['English', 'Spanish', 'French', 'German', 'Italian']; // Add more languages as needed
+  const availableLanguages = [
+    'English',
+    'Spanish',
+    'French',
+    'German',
+    'Italian',
+    'Portuguese',
+    'Russian',
+    'Chinese (Simplified)',
+    'Japanese',
+    'Korean',
+    'Arabic',
+    'Hindi',
+    'Dutch',
+    'Swedish',
+    'Polish',
+    'Turkish',
+    'Greek',
+    'Hebrew',
+    'Thai',
+    'Vietnamese'
+  ];
+  const [pendingTranslations, setPendingTranslations] = useState<{[key: string]: boolean}>({});
+  const translationCache = useRef<{[key: string]: {[key: string]: string}}>({});
+  const [translationProgress, setTranslationProgress] = useState(0);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [showLanguageSelector, setShowLanguageSelector] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -99,6 +128,13 @@ export default function Home() {
     addNewPage();
   };
 
+  const debouncedTranslate = useCallback(
+    debounce((language: string, pageIndex: number, content: PageContent) => {
+      translateContent(language, pageIndex, content);
+    }, 1000),
+    []
+  );
+
   const updatePageContent = async (language: string, pageIndex: number, newContent: PageContent) => {
     setLanguageVersions((prevVersions) => {
       const updatedVersions = [...prevVersions];
@@ -111,39 +147,65 @@ export default function Home() {
       return updatedVersions;
     });
 
-    // Automatically translate to other languages
-    for (const targetLang of targetLanguages) {
+    // Queue translation for other languages
+    targetLanguages.forEach(targetLang => {
       if (targetLang !== language) {
-        const translatedContent = await translatePageContent(newContent, language, targetLang);
-        setLanguageVersions((prevVersions) => {
-          const updatedVersions = [...prevVersions];
-          const targetVersionIndex = updatedVersions.findIndex((v) => v.language === targetLang);
-          
-          if (targetVersionIndex !== -1) {
-            updatedVersions[targetVersionIndex].pages[pageIndex] = translatedContent;
-          } else {
-            updatedVersions.push({
-              language: targetLang,
-              pages: Array(pageIndex).fill(null).concat([translatedContent]),
-            });
-          }
+        setPendingTranslations(prev => ({...prev, [`${pageIndex}-${targetLang}`]: true}));
+        debouncedTranslate(language, pageIndex, newContent);
+      }
+    });
+  };
 
-          return updatedVersions;
-        });
+  const translateContent = async (sourceLanguage: string, pageIndex: number, content: PageContent) => {
+    for (const targetLang of targetLanguages) {
+      if (targetLang !== sourceLanguage) {
+        const cacheKey = `${sourceLanguage}-${targetLang}-${pageIndex}`;
+        const cachedTranslation = translationCache.current[cacheKey];
+
+        if (cachedTranslation) {
+          updateTranslation(targetLang, pageIndex, cachedTranslation, setLanguageVersions);
+        } else {
+          try {
+            const translatedContent = await translatePageContent(content, sourceLanguage, targetLang);
+            translationCache.current[cacheKey] = translatedContent;
+            updateTranslation(targetLang, pageIndex, translatedContent, setLanguageVersions);
+          } catch (error) {
+            console.error('Translation error:', error);
+          }
+        }
+
+        setPendingTranslations(prev => ({...prev, [`${pageIndex}-${targetLang}`]: false}));
       }
     }
   };
 
-  const translatePageContent = async (content: PageContent, fromLang: string, toLang: string): Promise<PageContent> => {
-    const translatedBlocks = await Promise.all(content.blocks.map(async (block) => {
-      if (block.type === 'text') {
-        const translatedText = await translateText(block.content as string, fromLang, toLang);
-        return { ...block, content: translatedText };
-      }
-      return block;
-    }));
+  const handleTranslateAllContent = async () => {
+    setIsTranslating(true);
+    setTranslationProgress(0);
+    const sourceLanguage = 'English'; // Assuming English is the source language
+    const currentVersion = languageVersions.find(v => v.language === sourceLanguage);
+    
+    if (!currentVersion) {
+      console.error('Source language version not found');
+      setIsTranslating(false);
+      return;
+    }
 
-    return { ...content, blocks: translatedBlocks };
+    const totalPages = currentVersion.pages.length * (targetLanguages.length - 1);
+    let translatedPages = 0;
+
+    for (const targetLang of targetLanguages) {
+      if (targetLang !== sourceLanguage) {
+        for (let i = 0; i < currentVersion.pages.length; i++) {
+          const translatedContent = await translatePageContent(currentVersion.pages[i], sourceLanguage, targetLang);
+          updateTranslation(targetLang, i, translatedContent, setLanguageVersions);
+          translatedPages++;
+          setTranslationProgress((translatedPages / totalPages) * 100);
+        }
+      }
+    }
+
+    setIsTranslating(false);
   };
 
   // Function to download the book (implementation can be added)
@@ -362,6 +424,10 @@ export default function Home() {
     });
   };
 
+  const handleShowTranslationOptions = () => {
+    setShowLanguageSelector(true);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-100 to-blue-200">
       <Header userAPIKey={userAPIKey} setUserAPIKey={setUserAPIKey} />
@@ -457,11 +523,30 @@ export default function Home() {
       ) : (
         <>
           <div className="container mx-auto px-4 py-8">
-            <LanguageSelector
-              availableLanguages={availableLanguages}
-              targetLanguages={targetLanguages}
-              setTargetLanguages={setTargetLanguages}
-            />
+            <Button
+              onClick={handleShowTranslationOptions}
+              className="mb-4 bg-indigo-600 text-white"
+            >
+              Translate to Other Languages
+            </Button>
+            
+            {showLanguageSelector && (
+              <LanguageSelector
+                availableLanguages={availableLanguages}
+                targetLanguages={targetLanguages}
+                setTargetLanguages={setTargetLanguages}
+              />
+            )}
+            
+            {showLanguageSelector && (
+              <Button
+                onClick={handleTranslateAllContent}
+                className="mb-4 bg-indigo-600 text-white"
+              >
+                Start Translation
+              </Button>
+            )}
+            
             <div className="flex flex-col lg:flex-row gap-8">
               {/* Editing Panel */}
               <div className="lg:w-1/2">
@@ -531,6 +616,7 @@ export default function Home() {
       )}
 
       <Footer downloadBook={downloadBook} isGeneratingDocx={isGeneratingDocx} />
+      <TranslationProgressIndicator progress={translationProgress} isTranslating={isTranslating} />
     </div>
   );
 }
