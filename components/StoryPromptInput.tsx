@@ -1,31 +1,33 @@
 import React from 'react';
-import { Button } from '@/components/ui/button';
 
-type StoryPromptInputProps = {
+interface StoryPromptInputProps {
   storyPrompt: string;
   setStoryPrompt: (prompt: string) => void;
   startStory: () => void;
-};
+}
 
-const StoryPromptInput: React.FC<StoryPromptInputProps> = ({ storyPrompt, setStoryPrompt, startStory }) => (
-  <div style={{ marginTop: '2.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-    <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>What kind of story would you like to create?</h2>
-    <textarea
-      value={storyPrompt}
-      onChange={(e) => setStoryPrompt(e.target.value)}
-      placeholder='E.g., A magical adventure in a world where animals can talk...'
-      style={{
-        width: '100%',
-        maxWidth: '600px',
-        height: '150px',
-        padding: '0.5rem',
-        marginBottom: '1rem',
-        borderRadius: '0.375rem',
-        border: '1px solid #d1d5db',
-      }}
-    />
-    <Button onClick={startStory}>Start Story</Button>
-  </div>
-);
+const StoryPromptInput: React.FC<StoryPromptInputProps> = ({
+  storyPrompt,
+  setStoryPrompt,
+  startStory,
+}) => {
+  return (
+    <div className="max-w-2xl mx-auto">
+      <textarea
+        value={storyPrompt}
+        onChange={(e) => setStoryPrompt(e.target.value)}
+        placeholder="Enter your story prompt here..."
+        className="w-full p-4 text-indigo-900 bg-white rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4"
+        rows={4}
+      />
+      <button
+        onClick={startStory}
+        className="w-full bg-indigo-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-indigo-700 transition duration-300 ease-in-out"
+      >
+        Start Your Story
+      </button>
+    </div>
+  );
+};
 
 export default StoryPromptInput;

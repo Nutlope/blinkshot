@@ -1,6 +1,6 @@
 export type ImageResponse = {
   b64_json: string;
-  timings: { inference: number };
+  timings?: { inference: number };
 };
 
 export type ContentBlock =

@@ -5,7 +5,10 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 import { jsPDF } from 'jspdf';
 import { Document, Packer, Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, WidthType, IImageOptions } from 'docx';
 import { Button } from "@/components/ui/button";
-import { Download, Upload, Maximize, Minimize } from 'lucide-react';
+import { Download, Upload, Maximize, Minimize, Palette } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Slider } from '@/components/ui/slider';
+import { Select } from '@/components/ui/select';
 
 interface Block {
   id: string;
@@ -45,27 +48,15 @@ const BackgroundImage = memo(({ backgroundImage, onBackgroundImageUpload }: Back
       backgroundPosition: 'center',
       zIndex: 1
     }} />
-    <label htmlFor="bg-image-upload" style={{
-      position: 'absolute',
-      top: '10px',
-      right: '10px',
-      zIndex: 3,
-      background: 'rgba(255, 255, 255, 0.7)',
-      padding: '8px 12px',
-      borderRadius: '4px',
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      fontSize: '14px'
-    }}>
-      <Upload size={16} style={{ marginRight: '5px' }} />
+    <label htmlFor="bg-image-upload" className="absolute top-2 right-2 z-20 bg-white bg-opacity-80 text-gray-800 hover:bg-opacity-100 px-3 py-2 rounded-md shadow-md cursor-pointer transition duration-300 ease-in-out flex items-center text-sm font-medium">
+      <Upload size={16} className="mr-2" />
       Upload Background
       <input
         id="bg-image-upload"
         type="file"
         accept="image/*"
         onChange={onBackgroundImageUpload}
-        style={{ display: 'none' }}
+        className="hidden"
       />
     </label>
   </>
@@ -77,6 +68,10 @@ const MagazinePreview: React.FC<MagazinePreviewProps> = ({ pages, language, upda
   const [textColor, setTextColor] = useState('#333333');
   const [isFullScreen, setIsFullScreen] = useState(false);
   const backgroundImagesRef = useRef<(string | undefined)[]>(pages.map(() => undefined));
+  const [showCustomization, setShowCustomization] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(100);
+  const [selectedDevice, setSelectedDevice] = useState('desktop');
+  const [brandColor, setBrandColor] = useState('#000000');
 
   useEffect(() => {
     setPagesState(pages.map(page => ({
@@ -444,103 +439,215 @@ const MagazinePreview: React.FC<MagazinePreviewProps> = ({ pages, language, upda
     setIsFullScreen(!isFullScreen);
   };
 
-  const PreviewContent = () => (
-    <>
-      <div style={{ 
-        marginBottom: '20px', 
-        display: 'flex', 
-        alignItems: 'center', 
-        backgroundColor: '#4CAF50', 
-        padding: '10px', 
-        borderRadius: '4px' 
-      }}>
-        <label style={{ 
-          marginRight: '20px', 
-          display: 'flex', 
-          alignItems: 'center',
-          color: 'black',
-          fontWeight: 'bold'
-        }}>
-          Background Color:
-          <input 
-            type="color" 
-            value={backgroundColor} 
-            onChange={(e) => setBackgroundColor(e.target.value)}
-            style={{ 
-              marginLeft: '10px',
-              width: '50px',
-              height: '30px',
-              padding: '0',
-              border: '1px solid #45a049',
-              borderRadius: '4px'
-            }}
-          />
-        </label>
-        <label style={{ 
-          display: 'flex', 
-          alignItems: 'center',
-          color: 'black',
-          fontWeight: 'bold'
-        }}>
-          Text Color:
-          <input 
-            type="color" 
-            value={textColor} 
-            onChange={(e) => setTextColor(e.target.value)}
-            style={{ 
-              marginLeft: '10px',
-              width: '50px',
-              height: '30px',
-              padding: '0',
-              border: '1px solid #45a049',
-              borderRadius: '4px'
-            }}
-          />
-        </label>
-        <Button onClick={toggleFullScreen} style={{ marginLeft: 'auto' }}>
-          {isFullScreen ? <Minimize size={16} /> : <Maximize size={16} />}
-          {isFullScreen ? 'Exit Full Screen' : 'Full Screen'}
-        </Button>
-      </div>
-      {pagesState.map(renderPage)}
-      <div className="download-buttons" style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
-        <Button onClick={downloadPDF}>
-          <Download size={16} style={{ marginRight: '5px' }} />
-          Download PDF
-        </Button>
-        <Button onClick={downloadDOCX}>
-          <Download size={16} style={{ marginRight: '5px' }} />
-          Download DOCX
-        </Button>
-        <Button onClick={downloadEPUB}>
-          <Download size={16} style={{ marginRight: '5px' }} />
-          Download EPUB
-        </Button>
-      </div>
-    </>
-  );
+  const toggleCustomization = () => {
+    setShowCustomization(!showCustomization);
+  };
 
   return (
     <DndProvider backend={HTML5Backend}>
-      {isFullScreen ? (
-        <div style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: "100vw",
-          height: "100vh",
-          backgroundColor: "rgba(0, 0, 0, 0.8)",
-          zIndex: 1000,
-          overflow: "auto",
-          padding: "2rem"
-        }}>
-          <PreviewContent />
+      <div className={`magazine-preview ${isFullScreen ? 'fixed inset-0 z-50 bg-black' : ''}`}>
+        <div className={`${isFullScreen ? 'h-screen overflow-auto' : ''} bg-gradient-to-br from-indigo-100 to-purple-100 p-8`}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className={`max-w-6xl mx-auto bg-white rounded-lg shadow-2xl overflow-hidden ${isFullScreen ? 'h-full' : ''}`}
+          >
+            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h1 className="text-3xl font-bold">Your Luxury Magazine</h1>
+                <div className="flex space-x-4">
+                  <Button onClick={toggleCustomization} variant="outline" className="text-white border-white hover:bg-white hover:text-indigo-600">
+                    <Palette size={16} className="mr-2" />
+                    Customize
+                  </Button>
+                  <Button onClick={toggleFullScreen} variant="outline" className="text-white border-white hover:bg-white hover:text-indigo-600">
+                    {isFullScreen ? <Minimize size={16} /> : <Maximize size={16} />}
+                    {isFullScreen ? 'Exit Immersion' : 'Immerse'}
+                  </Button>
+                </div>
+              </div>
+              {showCustomization && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="bg-white bg-opacity-10 p-4 rounded-lg mt-4"
+                >
+                  <h3 className="text-xl font-semibold mb-4 text-white">Customize Your Magazine</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-white mb-2">Background Color</label>
+                      <div className="flex items-center space-x-2">
+                        <input 
+                          type="color" 
+                          value={backgroundColor} 
+                          onChange={(e) => setBackgroundColor(e.target.value)}
+                          className="w-10 h-10 rounded-full cursor-pointer"
+                        />
+                        <span className="text-white">{backgroundColor}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-white mb-2">Text Color</label>
+                      <div className="flex items-center space-x-2">
+                        <input 
+                          type="color" 
+                          value={textColor} 
+                          onChange={(e) => setTextColor(e.target.value)}
+                          className="w-10 h-10 rounded-full cursor-pointer"
+                        />
+                        <span className="text-white">{textColor}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-white mb-2">Brand Color</label>
+                      <div className="flex items-center space-x-2">
+                        <input 
+                          type="color" 
+                          value={brandColor} 
+                          onChange={(e) => setBrandColor(e.target.value)}
+                          className="w-10 h-10 rounded-full cursor-pointer"
+                        />
+                        <span className="text-white">{brandColor}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-white mb-2">Zoom Level</label>
+                      <Slider
+                        value={[zoomLevel]}
+                        onValueChange={(value) => setZoomLevel(value[0])}
+                        min={50}
+                        max={200}
+                        step={10}
+                        className="w-full"
+                      />
+                      <span className="text-white">{zoomLevel}%</span>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-white mb-2">Preview Device</label>
+                      <Select
+                        value={selectedDevice}
+                        onValueChange={setSelectedDevice}
+                        options={[
+                          { value: 'desktop', label: 'Desktop' },
+                          { value: 'tablet', label: 'Tablet' },
+                          { value: 'mobile', label: 'Mobile' },
+                        ]}
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </div>
+
+            {/* Magazine content */}
+            <div className={`p-6 ${isFullScreen ? 'overflow-auto' : ''}`}>
+              {pagesState.map((page, pageIndex) => (
+                <motion.div
+                  key={pageIndex}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: pageIndex * 0.1 }}
+                  className="mb-12 last:mb-0"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-2xl font-bold text-gray-800">Page {pageIndex + 1}</h2>
+                    <div className="flex items-center space-x-4">
+                      <label className="flex items-center space-x-2">
+                        <span className="text-sm font-medium text-gray-600">Layout:</span>
+                        <select
+                          value={page.columns}
+                          onChange={(e) => updatePageColumns(pageIndex, parseInt(e.target.value))}
+                          className="form-select rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                        >
+                          {[1, 2, 3, 4].map((num) => (
+                            <option key={num} value={num}>{num} Column{num > 1 ? 's' : ''}</option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                  </div>
+                  <div 
+                    className="relative rounded-lg overflow-hidden shadow-lg"
+                    style={{
+                      backgroundColor: backgroundColor,
+                      color: textColor,
+                      minHeight: '300px',
+                      transform: `scale(${zoomLevel / 100})`,
+                      transformOrigin: 'top left',
+                      width: selectedDevice === 'mobile' ? '320px' : selectedDevice === 'tablet' ? '768px' : '100%',
+                      margin: '0 auto',
+                    }}
+                  >
+                    <BackgroundImage
+                      backgroundImage={page.backgroundImage}
+                      onBackgroundImageUpload={handleBackgroundImageUpload(pageIndex)}
+                    />
+                    <div className="relative z-10 p-6">
+                      <div 
+                        className={`grid gap-6`}
+                        style={{ gridTemplateColumns: `repeat(${page.columns}, minmax(0, 1fr))` }}
+                      >
+                        {page.blocks.map((block, blockIndex) => (
+                          <motion.div
+                            key={block.id}
+                            drag
+                            dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+                            className="bg-white bg-opacity-90 rounded-lg shadow-md p-4 cursor-move"
+                          >
+                            {block.type === 'text' ? (
+                              <p 
+                                dangerouslySetInnerHTML={{ __html: block.content as string }} 
+                                style={{ 
+                                  fontFamily: "'Playfair Display', serif",
+                                  fontSize: block.size === 'large' ? '24px' : '16px',
+                                  lineHeight: '1.6',
+                                  color: textColor,
+                                }}
+                              />
+                            ) : block.type === 'image' && block.content && typeof block.content === 'object' && 'b64_json' in block.content ? (
+                              <div className="relative w-full h-64 md:h-96 rounded-lg overflow-hidden shadow-lg">
+                                <Image 
+                                  src={`data:image/png;base64,${block.content.b64_json}`}
+                                  alt={`Image ${blockIndex}`}
+                                  layout="fill"
+                                  objectFit="cover"
+                                  className="transition-transform duration-300 hover:scale-105"
+                                />
+                              </div>
+                            ) : (
+                              <p className="text-red-500 italic">Image not available</p>
+                            )}
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+                    <div 
+                      className="absolute bottom-0 left-0 w-full h-2"
+                      style={{ backgroundColor: brandColor }}
+                    ></div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Download buttons */}
+            <div className="bg-gray-100 p-6 flex justify-center space-x-4">
+              {['PDF', 'DOCX', 'EPUB'].map((format) => (
+                <Button
+                  key={format}
+                  onClick={() => format === 'PDF' ? downloadPDF() : format === 'DOCX' ? downloadDOCX() : downloadEPUB()}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105"
+                >
+                  <Download className="w-5 h-5 mr-2" />
+                  Download as {format}
+                </Button>
+              ))}
+            </div>
+          </motion.div>
         </div>
-      ) : (
-        <div className="magazine-preview" style={{ padding: '20px' }}>
-          <PreviewContent />
-        </div>
-      )}
+      </div>
     </DndProvider>
   );
 };

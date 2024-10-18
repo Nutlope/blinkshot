@@ -24,6 +24,7 @@
     "docx": "^9.0.1",
     "epub-gen": "^0.1.0",
     "file-saver": "^2.0.5",
+    "framer-motion": "^11.11.9",
     "html2canvas": "^1.4.1",
     "jspdf": "^2.5.2",
     "jszip": "^3.10.1",

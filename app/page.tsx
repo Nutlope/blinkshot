@@ -18,6 +18,7 @@ import { v4 as uuidv4 } from 'uuid';
 import EditableBookPreview from '@/components/EditableBookPreview';
 import { Document, Packer, Paragraph, TextRun, ImageRun, AlignmentType } from 'docx';
 import { saveAs } from 'file-saver';
+import Image from 'next/image';
 
 // Use dynamic import for MagazinePreview
 const MagazinePreview = dynamic(() => import('@/components/MagazinePreview'), { ssr: false });
@@ -310,15 +311,97 @@ export default function Home() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-100 to-blue-200">
       <Header userAPIKey={userAPIKey} setUserAPIKey={setUserAPIKey} />
 
       {!hasStartedStory ? (
-        <StoryPromptInput
-          storyPrompt={storyPrompt}
-          setStoryPrompt={setStoryPrompt}
-          startStory={startStory}
-        />
+        <div className="container mx-auto px-4 py-12">
+          <div className="text-center mb-16">
+            <h1 className="text-5xl font-bold text-indigo-900 mb-4">
+              Transform Your Ideas into Captivating Stories
+            </h1>
+            <p className="text-xl text-indigo-700 mb-8">
+              Harness the power of AI to create, edit, and publish your stories in minutes, not months!
+            </p>
+            <StoryPromptInput
+              storyPrompt={storyPrompt}
+              setStoryPrompt={setStoryPrompt}
+              startStory={startStory}
+            />
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8 mb-16">
+            <FeatureCard
+              icon="🚀"
+              title="10x Faster Creation"
+              description="Generate complete, high-quality stories in minutes with our advanced AI technology"
+            />
+            <FeatureCard
+              icon="🌍"
+              title="Global Reach"
+              description="Instantly translate your stories into multiple languages, expanding your audience worldwide"
+            />
+            <FeatureCard
+              icon="📚"
+              title="Multi-Format Export"
+              description="Publish your stories as books, comics, magazines, or slideshows with a single click"
+            />
+          </div>
+
+          <div className="bg-white rounded-lg shadow-lg p-8 mb-16">
+            <h2 className="text-3xl font-bold text-center text-indigo-900 mb-8">
+              Your Journey to Bestseller Status
+            </h2>
+            <div className="flex flex-col md:flex-row justify-between items-center">
+              <StepCard
+                number="1"
+                title="Spark Your Imagination"
+                description="Enter a brief prompt or idea to kickstart your story"
+              />
+              <StepCard
+                number="2"
+                title="AI-Powered Creation"
+                description="Watch as our AI crafts a unique, engaging narrative based on your input"
+              />
+              <StepCard
+                number="3"
+                title="Polish and Publish"
+                description="Refine your story with our intuitive editor and export in your preferred format"
+              />
+            </div>
+          </div>
+
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold text-indigo-900 mb-4">
+              Join Thousands of Satisfied Storytellers
+            </h2>
+            <div className="flex flex-wrap justify-center gap-8">
+              <Testimonial
+                quote="This tool has revolutionized my writing process. I've published three books in the time it used to take me to write one!"
+                author="Sarah J., Bestselling Author"
+              />
+              <Testimonial
+                quote="The multi-language support helped me reach readers in 5 new countries. My audience has grown exponentially!"
+                author="Michael L., International Content Creator"
+              />
+            </div>
+          </div>
+
+          <div className="text-center">
+            <h2 className="text-3xl font-bold text-indigo-900 mb-4">
+              Ready to Write Your Masterpiece?
+            </h2>
+            <p className="text-xl text-indigo-700 mb-8">
+              Join today and turn your ideas into captivating stories in minutes!
+            </p>
+            <button
+              onClick={() => document.querySelector('textarea')?.focus()}
+              className="bg-indigo-600 text-white font-bold py-3 px-8 rounded-full text-xl hover:bg-indigo-700 transition duration-300 ease-in-out transform hover:scale-105"
+            >
+              Start Writing Now
+            </button>
+          </div>
+        </div>
       ) : (
         <>
           <LanguageSelector
@@ -449,7 +532,10 @@ export default function Home() {
                   <EditableBookPreview
                     pages={languageVersions.find((v) => v.language === activeLanguage)?.pages as Page[] || []}
                     language={activeLanguage}
-                    availableLanguages={availableLanguages} // Added this line
+                    availableLanguages={availableLanguages}
+                    updatePageContent={(pageIndex, newPage) => 
+                      updatePageContent(activeLanguage, pageIndex, newPage as PageContent)
+                    }
                   />
                 </div>
               )}
@@ -477,6 +563,37 @@ export default function Home() {
       )}
 
       <Footer downloadBook={downloadBook} isGeneratingDocx={isGeneratingDocx} />
+    </div>
+  );
+}
+
+function FeatureCard({ icon, title, description }) {
+  return (
+    <div className="bg-white rounded-lg shadow-md p-6 text-center">
+      <div className="text-4xl mb-4">{icon}</div>
+      <h3 className="text-xl font-semibold text-indigo-900 mb-2">{title}</h3>
+      <p className="text-indigo-700">{description}</p>
+    </div>
+  );
+}
+
+function StepCard({ number, title, description }) {
+  return (
+    <div className="flex flex-col items-center mb-8 md:mb-0">
+      <div className="bg-indigo-600 text-white rounded-full w-12 h-12 flex items-center justify-center text-xl font-bold mb-4">
+        {number}
+      </div>
+      <h3 className="text-xl font-semibold text-indigo-900 mb-2">{title}</h3>
+      <p className="text-indigo-700 text-center">{description}</p>
+    </div>
+  );
+}
+
+function Testimonial({ quote, author }) {
+  return (
+    <div className="bg-white rounded-lg shadow-md p-6 max-w-md">
+      <p className="text-indigo-700 italic mb-4">"{quote}"</p>
+      <p className="text-indigo-900 font-semibold">{author}</p>
     </div>
   );
 }

@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Trash2, Plus, RefreshCw } from 'lucide-react';
+import { Trash2, Plus, RefreshCw, Upload } from 'lucide-react';
 import { useDebouncedCallback } from 'use-debounce';
 import Spinner from '@/components/spinner';
+import ProgressIndicator from '@/components/ui/ProgressIndicator';
 import { ContentBlock, PageProps, ImageResponse } from '@/types';
 
 const Page: React.FC<PageProps> = ({
@@ -20,6 +21,7 @@ const Page: React.FC<PageProps> = ({
 }) => {
   const [blocks, setBlocks] = useState<ContentBlock[]>(page.blocks);
   const [selectedText, setSelectedText] = useState<{ blockIndex: number; text: string } | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   useEffect(() => {
     setPageContent({ blocks });
@@ -63,12 +65,41 @@ const Page: React.FC<PageProps> = ({
     generateImageForTextBlock(blockIndex, content);
   };
 
-  // Function to add a new block
-  const addBlock = (type: 'text' | 'image', afterIndex?: number) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Modified function to handle image upload with progress
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadstart = () => setUploadProgress(0);
+      reader.onprogress = (e) => {
+        if (e.lengthComputable) {
+          setUploadProgress((e.loaded / e.total) * 100);
+        }
+      };
+      reader.onloadend = () => {
+        setUploadProgress(null);
+        const base64String = reader.result as string;
+        addBlock('image', undefined, base64String);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Modified addBlock function to handle uploaded images
+  const addBlock = (type: 'text' | 'image', afterIndex?: number, uploadedImage?: string) => {
     const newBlock: ContentBlock =
       type === 'text'
         ? { type: 'text', content: '', generating: false, context: selectedText?.text || '' }
-        : { type: 'image', content: null, generating: false, prompt: '' };
+        : { 
+            type: 'image', 
+            content: uploadedImage 
+              ? { b64_json: uploadedImage.split(',')[1] } 
+              : null, 
+            generating: !uploadedImage, 
+            prompt: '' 
+          };
 
     setBlocks((prevBlocks) => {
       const newBlocks = [...prevBlocks];
@@ -81,8 +112,9 @@ const Page: React.FC<PageProps> = ({
         selectedText.blockIndex === afterIndex &&
         selectedText.text
       ) {
-        // Automatically generate text for the new block using the selected text as context
         setTimeout(() => generateTextWithContext(insertIndex, selectedText.text), 0);
+      } else if (type === 'image' && !uploadedImage) {
+        generateImageForTextBlock(insertIndex - 1, newBlocks[insertIndex - 1].content as string);
       }
 
       return newBlocks;
@@ -339,11 +371,27 @@ const Page: React.FC<PageProps> = ({
               <Plus style={{ width: '1rem', height: '1rem', marginRight: '0.25rem' }} />
               Add Text
             </Button>
-            <Button onClick={() => addBlock('image')} size="sm">
+            <Button onClick={() => addBlock('image')} size="sm" style={{ marginRight: '0.5rem' }}>
               <Plus style={{ width: '1rem', height: '1rem', marginRight: '0.25rem' }} />
-              Add Image
+              Generate Image
             </Button>
+            <Button onClick={() => fileInputRef.current?.click()} size="sm">
+              <Upload style={{ width: '1rem', height: '1rem', marginRight: '0.25rem' }} />
+              Upload Image
+            </Button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              style={{ display: 'none' }}
+              onChange={handleImageUpload}
+              accept="image/*"
+            />
           </div>
+          {uploadProgress !== null && (
+            <div className="mt-2">
+              <ProgressIndicator progress={uploadProgress} />
+            </div>
+          )}
         </div>
       )}
       {blocks.map((block, idx) => {
@@ -463,7 +511,9 @@ const Page: React.FC<PageProps> = ({
                     </Button>
                   )}
                 </>
-              ) : null}
+              ) : (
+                <div style={{ textAlign: 'center', color: '#4B5563' }}>Image not available</div>
+              )}
             </div>
           );
         } else {
