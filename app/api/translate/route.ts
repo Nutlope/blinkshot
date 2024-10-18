@@ -1,50 +1,38 @@
 import { NextResponse } from 'next/server';
-import { TogetherAI } from '@/lib/togetherAI'; // You'll need to create this
-
-const MAX_TOKENS = 500; // Adjust based on Together AI's limits
+import { TogetherAI } from "@langchain/community/llms/togetherai";
+import { PromptTemplate } from "@langchain/core/prompts";
 
 export async function POST(req: Request) {
-  const { text, targetLanguage } = await req.json();
-
   try {
-    const togetherAI = new TogetherAI(process.env.TOGETHER_AI_API_KEY);
-    
-    // Split text into chunks
-    const chunks = splitTextIntoChunks(text, MAX_TOKENS);
-    
-    let translatedChunks = [];
-    for (const chunk of chunks) {
-      const prompt = `Translate the following text to ${targetLanguage}: "${chunk}"`;
-      const response = await togetherAI.generateText(prompt);
-      translatedChunks.push(response);
-    }
+    const { text, sourceLanguage, targetLanguage } = await req.json();
 
-    const translatedText = translatedChunks.join(' ');
-    return NextResponse.json({ translatedText });
+    const llm = new TogetherAI({
+      apiKey: process.env.TOGETHER_API_KEY,
+      model: "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+      maxTokens: 256,
+      temperature: 0.7,
+    });
+
+    const promptTemplate = PromptTemplate.fromTemplate(
+      "You are a professional translator. Translate the following text from {sourceLanguage} to {targetLanguage}:\n\n" +
+      "{text}\n\n" +
+      "Translation:"
+    );
+
+    const formattedPrompt = await promptTemplate.format({
+      sourceLanguage,
+      targetLanguage,
+      text,
+    });
+
+    const translatedText = await llm.call(formattedPrompt);
+
+    return NextResponse.json({ translatedText: translatedText.trim() });
   } catch (error) {
-    console.error('Error translating text:', error);
-    return NextResponse.json({ error: 'Failed to translate text' }, { status: 500 });
+    console.error('Error in translation:', error);
+    return NextResponse.json({ 
+      error: 'Failed to translate text', 
+      details: error instanceof Error ? error.message : 'Unknown error',
+    }, { status: 500 });
   }
-}
-
-function splitTextIntoChunks(text: string, maxTokens: number): string[] {
-  // Implement a function to split text into chunks of approximately maxTokens
-  // This is a simple implementation and might need refinement
-  const words = text.split(' ');
-  const chunks = [];
-  let currentChunk = [];
-
-  for (const word of words) {
-    if (currentChunk.length + word.length > maxTokens) {
-      chunks.push(currentChunk.join(' '));
-      currentChunk = [];
-    }
-    currentChunk.push(word);
-  }
-
-  if (currentChunk.length > 0) {
-    chunks.push(currentChunk.join(' '));
-  }
-
-  return chunks;
 }

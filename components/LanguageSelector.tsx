@@ -1,46 +1,41 @@
 import React from 'react';
+import { Checkbox } from '@/components/ui/checkbox';
 
-type LanguageSelectorProps = {
-  languages: string[];
-  activeLanguage: string;
-  setActiveLanguage: (language: string) => void;
-  addLanguage: (language: string) => void;
-  removeLanguage: (language: string) => void;
-};
+interface LanguageSelectorProps {
+  availableLanguages: string[];
+  targetLanguages: string[];
+  setTargetLanguages: (languages: string[]) => void;
+}
 
 const LanguageSelector: React.FC<LanguageSelectorProps> = ({
-  languages,
-  activeLanguage,
-  setActiveLanguage,
-  addLanguage,
-  removeLanguage,
-}) => (
-  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
-    <select
-      value={activeLanguage}
-      onChange={(e) => setActiveLanguage(e.target.value)}
-      style={{ marginRight: '1rem' }}
-    >
-      {languages.map((lang) => (
-        <option key={lang} value={lang}>
-          {lang}
-        </option>
-      ))}
-    </select>
-    <input
-      type='text'
-      placeholder='Add new language'
-      onKeyPress={(e) => {
-        if (e.key === 'Enter') {
-          addLanguage(e.currentTarget.value);
-          e.currentTarget.value = '';
-        }
-      }}
-    />
-    <button onClick={() => removeLanguage(activeLanguage)} disabled={languages.length === 1}>
-      Remove Language
-    </button>
-  </div>
-);
+  availableLanguages,
+  targetLanguages,
+  setTargetLanguages,
+}) => {
+  const handleLanguageToggle = (language: string) => {
+    if (targetLanguages.includes(language)) {
+      setTargetLanguages(targetLanguages.filter(lang => lang !== language));
+    } else {
+      setTargetLanguages([...targetLanguages, language]);
+    }
+  };
+
+  return (
+    <div className="mb-4 p-4 bg-white rounded-lg shadow-md">
+      <h3 className="text-lg font-semibold mb-2 text-gray-800">Target Languages</h3>
+      <div className="flex flex-wrap gap-4">
+        {availableLanguages.map((lang) => (
+          <label key={lang} className="flex items-center space-x-2 cursor-pointer">
+            <Checkbox
+              checked={targetLanguages.includes(lang)}
+              onCheckedChange={() => handleLanguageToggle(lang)}
+            />
+            <span className="text-gray-700">{lang}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 export default LanguageSelector;

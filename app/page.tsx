@@ -19,6 +19,9 @@ import EditableBookPreview from '@/components/EditableBookPreview';
 import { Document, Packer, Paragraph, TextRun, ImageRun, AlignmentType } from 'docx';
 import { saveAs } from 'file-saver';
 import Image from 'next/image';
+import TranslationManager from '@/components/TranslationManager';
+import PreviewSelector from '@/components/PreviewSelector';
+import { translateText } from '@/lib/translate'; // We'll create this utility function
 
 // Use dynamic import for MagazinePreview
 const MagazinePreview = dynamic(() => import('@/components/MagazinePreview'), { ssr: false });
@@ -47,8 +50,8 @@ export default function Home() {
     { language: 'English', pages: [] },
   ]);
   const [activePreview, setActivePreview] = useState<string>('book');
-
-  const availableLanguages = ['English', 'Spanish', 'French']; // Example
+  const [targetLanguages, setTargetLanguages] = useState<string[]>(['English']);
+  const availableLanguages = ['English', 'Spanish', 'French', 'German', 'Italian']; // Add more languages as needed
 
   useEffect(() => {
     return () => {
@@ -96,17 +99,51 @@ export default function Home() {
     addNewPage();
   };
 
-  const updatePageContent = (language: string, pageIndex: number, newContent: PageContent) => {
-    setLanguageVersions((prevVersions) =>
-      prevVersions.map((version) =>
-        version.language === language
-          ? {
-              ...version,
-              pages: version.pages.map((page, index) => (index === pageIndex ? newContent : page)),
-            }
-          : version
-      )
-    );
+  const updatePageContent = async (language: string, pageIndex: number, newContent: PageContent) => {
+    setLanguageVersions((prevVersions) => {
+      const updatedVersions = [...prevVersions];
+      const versionIndex = updatedVersions.findIndex((v) => v.language === language);
+      
+      if (versionIndex !== -1) {
+        updatedVersions[versionIndex].pages[pageIndex] = newContent;
+      }
+
+      return updatedVersions;
+    });
+
+    // Automatically translate to other languages
+    for (const targetLang of targetLanguages) {
+      if (targetLang !== language) {
+        const translatedContent = await translatePageContent(newContent, language, targetLang);
+        setLanguageVersions((prevVersions) => {
+          const updatedVersions = [...prevVersions];
+          const targetVersionIndex = updatedVersions.findIndex((v) => v.language === targetLang);
+          
+          if (targetVersionIndex !== -1) {
+            updatedVersions[targetVersionIndex].pages[pageIndex] = translatedContent;
+          } else {
+            updatedVersions.push({
+              language: targetLang,
+              pages: Array(pageIndex).fill(null).concat([translatedContent]),
+            });
+          }
+
+          return updatedVersions;
+        });
+      }
+    }
+  };
+
+  const translatePageContent = async (content: PageContent, fromLang: string, toLang: string): Promise<PageContent> => {
+    const translatedBlocks = await Promise.all(content.blocks.map(async (block) => {
+      if (block.type === 'text') {
+        const translatedText = await translateText(block.content as string, fromLang, toLang);
+        return { ...block, content: translatedText };
+      }
+      return block;
+    }));
+
+    return { ...content, blocks: translatedBlocks };
   };
 
   // Function to download the book (implementation can be added)
@@ -310,6 +347,21 @@ export default function Home() {
     }));
   };
 
+  const handleTranslationComplete = (translations: LanguageVersion[]) => {
+    setLanguageVersions((prevVersions) => {
+      const updatedVersions = [...prevVersions];
+      translations.forEach((translation) => {
+        const existingIndex = updatedVersions.findIndex((v) => v.language === translation.language);
+        if (existingIndex !== -1) {
+          updatedVersions[existingIndex] = translation;
+        } else {
+          updatedVersions.push(translation);
+        }
+      });
+      return updatedVersions;
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-100 to-blue-200">
       <Header userAPIKey={userAPIKey} setUserAPIKey={setUserAPIKey} />
@@ -404,159 +456,75 @@ export default function Home() {
         </div>
       ) : (
         <>
-          <LanguageSelector
-            languages={languages}
-            activeLanguage={activeLanguage}
-            setActiveLanguage={setActiveLanguage}
-            addLanguage={addLanguage}
-            removeLanguage={removeLanguage}
-          />
+          <div className="container mx-auto px-4 py-8">
+            <LanguageSelector
+              availableLanguages={availableLanguages}
+              targetLanguages={targetLanguages}
+              setTargetLanguages={setTargetLanguages}
+            />
+            <div className="flex flex-col lg:flex-row gap-8">
+              {/* Editing Panel */}
+              <div className="lg:w-1/2">
+                <EditingPanel
+                  languageVersions={languageVersions}
+                  activeLanguage={activeLanguage}
+                  addNewPage={addNewPage}
+                  imageCount={imageCount}
+                  setImageCount={setImageCount}
+                  updatePageContent={updatePageContent}
+                  setLanguageVersions={setLanguageVersions}
+                  userAPIKey={userAPIKey}
+                  iterativeMode={iterativeMode}
+                  isGeneratingDocx={isGeneratingDocx}
+                  storyPrompt={storyPrompt}
+                />
+              </div>
 
-          <div style={{ display: 'flex', height: 'calc(100vh - 150px)', overflow: 'hidden' }}>
-            {/* Editing Panel */}
-            <div
-              style={{
-                flex: 1,
-                overflowY: 'auto',
-                padding: '1rem',
-                borderRight: '1px solid #d1d5db',
-                backgroundColor: '#f9fafb',
-              }}
-            >
-              <EditingPanel
-                languageVersions={languageVersions}
-                activeLanguage={activeLanguage}
-                addNewPage={addNewPage}
-                imageCount={imageCount}
-                setImageCount={setImageCount}
-                updatePageContent={updatePageContent}
-                setLanguageVersions={setLanguageVersions}
-                userAPIKey={userAPIKey}
-                iterativeMode={iterativeMode}
-                isGeneratingDocx={isGeneratingDocx}
-                storyPrompt={storyPrompt}
-              />
-            </div>
-
-            {/* Final Preview */}
-            <div
-              style={{
-                flex: 1,
-                overflowY: 'auto',
-                padding: '1rem',
-                backgroundColor: '#e5e7eb',
-              }}
-            >
-              <FormatSelector activePreview={activePreview} setActivePreview={setActivePreview} />
-
-              {activePreview === 'book' && (
-                <div style={{ margin: '1rem' }}>
-                  <h2
-                    style={{
-                      fontSize: '1.5rem',
-                      marginBottom: '1rem',
-                      color: '#1f2937',
-                      textAlign: 'center',
-                    }}
-                  >
-                    Book Preview ({activeLanguage})
-                  </h2>
+              {/* Preview Panel */}
+              <div className="lg:w-1/2">
+                <PreviewSelector
+                  activePreview={activePreview}
+                  setActivePreview={setActivePreview}
+                  activeLanguage={activeLanguage}
+                  setActiveLanguage={setActiveLanguage}
+                  availableLanguages={targetLanguages}
+                />
+                {activePreview === 'book' && (
                   <FinalBookPreview
                     pages={languageVersions.find((v) => v.language === activeLanguage)?.pages || []}
                     language={activeLanguage}
                   />
-                </div>
-              )}
-              {activePreview === 'magazine' && (
-                <div style={{ margin: '1rem' }}>
-                  <h2
-                    style={{
-                      fontSize: '1.5rem',
-                      marginBottom: '1rem',
-                      color: '#1f2937',
-                      textAlign: 'center',
-                    }}
-                  >
-                    Magazine Preview ({activeLanguage})
-                  </h2>
+                )}
+                {activePreview === 'magazine' && (
                   <MagazinePreview
-                    pages={
-                      languageVersions
-                        .find((v) => v.language === activeLanguage)
-                        ?.pages.map(page => ({
-                          ...page,
-                          blocks: page.blocks.map(block => ({
-                            ...block,
-                            id: uuidv4(), // Ensure each block has a unique ID
-                            size: determineSize(block), // Assign appropriate size
-                          }))
-                        })) as Page[]
-                    }
+                    pages={languageVersions.find((v) => v.language === activeLanguage)?.pages || []}
                     language={activeLanguage}
-                  />
-                </div>
-              )}
-
-              {activePreview === 'comic' && (
-                <div style={{ margin: '1rem' }}>
-                  <h2
-                    style={{
-                      fontSize: '1.5rem',
-                      marginBottom: '1rem',
-                      color: '#1f2937',
-                      textAlign: 'center',
-                    }}
-                  >
-                    Comic Book Preview ({activeLanguage})
-                  </h2>
-                  <ComicPreview
-                    pages={convertToComicFormat(
-                      languageVersions.find((v) => v.language === activeLanguage)?.pages || []
-                    )}
-                  />
-                </div>
-              )}
-              {/* Add this block for EditableBookPreview */}
-              {activePreview === 'editablebook' && (
-                <div style={{ margin: '1rem' }}>
-                  <h2
-                    style={{
-                      fontSize: '1.5rem',
-                      marginBottom: '1rem',
-                      color: '#1f2937',
-                      textAlign: 'center',
-                    }}
-                  >
-                    Editable Book Preview ({activeLanguage})
-                  </h2>
-                  <EditableBookPreview
-                    pages={languageVersions.find((v) => v.language === activeLanguage)?.pages as Page[] || []}
-                    language={activeLanguage}
-                    availableLanguages={availableLanguages}
                     updatePageContent={(pageIndex, newPage) => 
                       updatePageContent(activeLanguage, pageIndex, newPage as PageContent)
                     }
                   />
-                </div>
-              )}
-              {activePreview === 'slideshow' && (
-                <div style={{ margin: '1rem' }}>
-                  <h2
-                    style={{
-                      fontSize: '1.5rem',
-                      marginBottom: '1rem',
-                      color: '#1f2937',
-                      textAlign: 'center',
-                    }}
-                  >
-                    Slideshow Preview ({activeLanguage})
-                  </h2>
-                  <SlideshowPreview
+                )}
+                {activePreview === 'comic' && (
+                  <ComicPreview
+                    pages={convertToComicFormat(languageVersions.find((v) => v.language === activeLanguage)?.pages || [])}
+                  />
+                )}
+                {activePreview === 'editablebook' && (
+                  <EditableBookPreview
                     pages={languageVersions.find((v) => v.language === activeLanguage)?.pages || []}
                     language={activeLanguage}
+                    updatePageContent={(pageIndex, newPage) => 
+                      updatePageContent(activeLanguage, pageIndex, newPage as PageContent)
+                    }
+                    availableLanguages={availableLanguages}
                   />
-                </div>
-              )}
+                )}
+                {activePreview === 'slideshow' && (
+                  <SlideshowPreview
+                    pages={languageVersions.find((v) => v.language === activeLanguage)?.pages || []}
+                  />
+                )}
+              </div>
             </div>
           </div>
         </>
