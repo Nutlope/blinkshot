@@ -1,31 +1,42 @@
-<a href="https://www.blinkshot.io">
-  <img alt="Blinkshot" src="./public/og-image.png">
-  <h1 align="center">BlinkShot</h1>
-</a>
+# StoryForge: AI-Powered Content Editor for Creators
 
-<p align="center">
-  An open source real-time AI image generator. Powered by Flux through Together.ai.
-</p>
+StoryForge is an innovative AI-powered content editor inspired by [Blinkshot](https://github.com/Nutlope/blinkshot). Our project takes the concept further, offering a comprehensive suite of tools for content creators to generate, edit, translate, and publish their work in various formats.
 
-## Tech stack
+## Features
 
-- [Flux Schnell](https://www.dub.sh/together-flux/) from BFL for the image model
-- [Together AI](https://www.dub.sh/together-ai) for inference
-- Next.js app router with Tailwind
-- Helicone for observability
-- Plausible for website analytics
+- **AI-Powered Content Generation**: From a single prompt, users can generate both text and contextually relevant images.
+- **Multi-Language Support**: Instantly translate content into multiple languages using Together AI's Gemma-2-27b-it model.
+- **Smart Translation Caching**: We implement a hashing technique to avoid re-translating unchanged content, improving efficiency.
+- **Multiple View Formats**: View and edit your content as a book, magazine, comic, or slideshow.
+- **Flexible Export Options**: Download your creations in various formats including DOCX, PDF, and EPUB.
 
-## Cloning & running
+## Tech Stack
 
-1. Clone the repo: `git clone https://github.com/Nutlope/blinkshot`
-2. Create a `.env.local` file and add your [Together AI API key](https://www.dub.sh/together-ai): `TOGETHER_API_KEY=`
-3. Run `npm install` and `npm run dev` to install dependencies and run locally
+- Next.js with App Router
+- Tailwind CSS for styling
+- Together AI for inference (using Gemma-2-27b-it for translations)
+- Azure Blob Storage for image storage(to do)
+- Prisma Supabase for database management(to do)
 
-## Future Tasks
+## Getting Started
 
-- [ ] Show a download button so people can get their images
-- [ ] Add auth and rate limit by email instead of IP
-- [ ] Show people how many credits they have left
-- [ ] Build an image gallery of cool generations w/ their prompts
-- [ ] Add replay functionality so people can replay consistent generations
-- [ ] Add a setting to select between steps (2-5)
+1. Clone the repo:
+2. Install dependencies: `npm install`
+3. Set up your environment variables (see `.env.example`)
+4. Run the development server: `npm run dev`
+
+## Future Enhancements (To-Do)
+
+- [ ] Integrate video generation and embedding in documents
+- [ ] Implement speech-to-text functionality for initial prompts
+- [ ] Add support for more languages and translation models
+- [ ] Enhance the comic view with panel layout customization
+- [ ] Implement collaborative editing features
+
+## Acknowledgements
+
+This project was inspired by [Blinkshot](https://github.com/Nutlope/blinkshot). We've expanded on the concept to create a comprehensive tool for content creators.
+
+## License
+
+[MIT License](LICENSE)
