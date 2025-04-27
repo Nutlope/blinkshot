@@ -120,7 +120,9 @@ export default function Home() {
     if (!activeImage) return;
     
     // Create an image from the base64 data
-    const img = new Image();
+    const img = new window.Image();
+    img.crossOrigin = "Anonymous"; // Add cross-origin handling
+    
     img.onload = () => {
       // Create a canvas to manipulate the image
       const canvas = document.createElement('canvas');
@@ -141,26 +143,52 @@ export default function Home() {
       
       // Draw image on canvas
       const ctx = canvas.getContext('2d');
-      ctx?.drawImage(img, 0, 0, width, height);
+      if (!ctx) {
+        console.error("Failed to get canvas context");
+        return;
+      }
       
-      // Convert to blob
-      canvas.toBlob((blob) => {
-        if (!blob) return;
-        
-        // Create download link
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `blinkshot-image.${format}`;
-        document.body.appendChild(a);
-        a.click();
-        
-        // Clean up
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, format === 'jpg' ? 'image/jpeg' : 'image/png');
+      // Fill with white background for JPG (prevents transparency issues)
+      if (format === 'jpg') {
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, width, height);
+      }
+      
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      // Set quality parameter (0.95 for high, 0.8 for medium, 0.6 for low)
+      const qualityValue = quality === 'high' ? 0.95 : quality === 'medium' ? 0.8 : 0.6;
+      
+      // Convert to blob with quality parameter
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            console.error("Failed to create blob");
+            return;
+          }
+          
+          // Create download link
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `blinkshot-image.${format}`;
+          document.body.appendChild(a);
+          a.click();
+          
+          // Clean up
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 
+        format === 'jpg' ? 'image/jpeg' : 'image/png',
+        qualityValue
+      );
     };
     
+    img.onerror = (err) => {
+      console.error("Error loading image for download:", err);
+    };
+    
+    // Ensure we're using the correct data URL format
     img.src = `data:image/png;base64,${activeImage.b64_json}`;
   };
 
@@ -339,7 +367,7 @@ export default function Home() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
-                      <div className="p-2 text-xs font-semibold text-gray-500">JPG Format</div>
+                      <div className="p-2 text-xs font-semibold text-gray-200">JPG Format</div>
                       <DropdownMenuItem onClick={() => handleDownload('jpg', 'high')}>
                         High Resolution
                       </DropdownMenuItem>
@@ -350,7 +378,7 @@ export default function Home() {
                         Low Resolution
                       </DropdownMenuItem>
                       
-                      <div className="p-2 text-xs font-semibold text-gray-500">PNG Format</div>
+                      <div className="p-2 text-xs font-semibold text-gray-200">PNG Format</div>
                       <DropdownMenuItem onClick={() => handleDownload('png', 'high')}>
                         High Resolution
                       </DropdownMenuItem>
