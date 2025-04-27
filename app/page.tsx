@@ -171,7 +171,11 @@ export default function Home() {
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = `blinkshot-image.${format}`;
+          
+          // Add resolution prefix to filename
+          const prefix = quality === 'high' ? 'highres_' : quality === 'medium' ? 'mediumres_' : 'lowres_';
+          a.download = `${prefix}blinkshot-image.${format}`;
+          
           document.body.appendChild(a);
           a.click();
           
