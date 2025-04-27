@@ -36,6 +36,13 @@ import { useQuery } from "@tanstack/react-query";
 import { useDebounce } from "@uidotdev/usehooks";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Download } from "lucide-react";
 
 type ImageResponse = {
   b64_json: string;
@@ -107,6 +114,55 @@ export default function Home() {
 
   let activeImage =
     activeIndex !== undefined ? generations[activeIndex].image : undefined;
+
+  // Function to handle image download
+  const handleDownload = (format: 'jpg' | 'png', quality: 'high' | 'medium' | 'low') => {
+    if (!activeImage) return;
+    
+    // Create an image from the base64 data
+    const img = new Image();
+    img.onload = () => {
+      // Create a canvas to manipulate the image
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+      
+      // Adjust size based on quality
+      if (quality === 'medium') {
+        width = Math.floor(width * 0.7);
+        height = Math.floor(height * 0.7);
+      } else if (quality === 'low') {
+        width = Math.floor(width * 0.4);
+        height = Math.floor(height * 0.4);
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      
+      // Draw image on canvas
+      const ctx = canvas.getContext('2d');
+      ctx?.drawImage(img, 0, 0, width, height);
+      
+      // Convert to blob
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        
+        // Create download link
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `blinkshot-image.${format}`;
+        document.body.appendChild(a);
+        a.click();
+        
+        // Clean up
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, format === 'jpg' ? 'image/jpeg' : 'image/png');
+    };
+    
+    img.src = `data:image/png;base64,${activeImage.b64_json}`;
+  };
 
   return (
     <div className="flex h-full flex-col">
@@ -270,6 +326,43 @@ export default function Home() {
                   alt=""
                   className={`${isFetching ? "animate-pulse" : ""} max-w-full rounded-lg object-cover shadow-sm shadow-black`}
                 />
+                <div className="mt-2 flex justify-end">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="inline-flex items-center gap-2"
+                      >
+                        <Download className="size-4" />
+                        Download
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <div className="p-2 text-xs font-semibold text-gray-500">JPG Format</div>
+                      <DropdownMenuItem onClick={() => handleDownload('jpg', 'high')}>
+                        High Resolution
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDownload('jpg', 'medium')}>
+                        Medium Resolution
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDownload('jpg', 'low')}>
+                        Low Resolution
+                      </DropdownMenuItem>
+                      
+                      <div className="p-2 text-xs font-semibold text-gray-500">PNG Format</div>
+                      <DropdownMenuItem onClick={() => handleDownload('png', 'high')}>
+                        High Resolution
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDownload('png', 'medium')}>
+                        Medium Resolution
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDownload('png', 'low')}>
+                        Low Resolution
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
 
               <div className="mt-4 flex gap-4 overflow-x-scroll pb-4">
