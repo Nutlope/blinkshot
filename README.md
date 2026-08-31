@@ -4,12 +4,12 @@
 </a>
 
 <p align="center">
-  An open source real-time AI image generator. Powered by Flux through Together.ai.
+  An open source real-time AI image generator. Powered by Juggernaut Lightning Flux through Together.ai.
 </p>
 
 ## Tech stack
 
-- [Flux Schnell](https://togetherai.link/together-flux/?utm_source=blinkshot&utm_medium=referral&utm_campaign=example-app) from BFL for the image model
+- [Juggernaut Lightning Flux](https://www.together.ai/models/juggernaut-lightning-flux) from RunDiffusion for the image model
 - [Together AI](https://togetherai.link/?utm_source=blinkshot&utm_medium=referral&utm_campaign=example-app) for inference
 - Next.js app router with Tailwind
 - [Braintrust](https://www.braintrust.dev/) for image-generation tracing and observability

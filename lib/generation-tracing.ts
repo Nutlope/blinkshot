@@ -51,7 +51,7 @@ export function buildGenerationTraceSuccess(
   response: TogetherImageResponse,
   durationMs: number,
 ) {
-  const inferenceSeconds = response.data?.[0]?.timings?.inference;
+  const inferenceMilliseconds = response.data?.[0]?.timings?.inference;
   const cost = estimateImageGenerationCost({
     width: IMAGE_GENERATION_WIDTH,
     height: IMAGE_GENERATION_HEIGHT,
@@ -63,8 +63,8 @@ export function buildGenerationTraceSuccess(
     estimated_cost: cost.estimatedCost,
   };
 
-  if (typeof inferenceSeconds === "number") {
-    metrics.inference_ms = inferenceSeconds * 1_000;
+  if (typeof inferenceMilliseconds === "number") {
+    metrics.inference_ms = inferenceMilliseconds;
   }
 
   return {

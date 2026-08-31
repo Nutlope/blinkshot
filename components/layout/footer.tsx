@@ -16,11 +16,11 @@ export function Footer() {
         </a>{" "}
         &{" "}
         <a
-          href="https://togetherai.link/together-flux/?utm_source=blinkshot&utm_medium=referral&utm_campaign=example-app"
+          href="https://www.together.ai/models/juggernaut-lightning-flux"
           target="_blank"
           className="underline underline-offset-4 transition hover:text-blue-500"
         >
-          Flux
+          Juggernaut Lightning Flux
         </a>
       </p>
 

@@ -1,7 +1,6 @@
 import {
   CONFIGURED_IMAGE_MODELS,
   IMAGE_GENERATION_PRICE_PER_MEGAPIXEL,
-  IMAGE_GENERATION_PRICING_BASE_STEPS,
 } from "../lib/image-generation";
 
 const apiKey = process.env.TOGETHER_API_KEY;
@@ -16,6 +15,10 @@ type CatalogModel = {
     image_pixel?: {
       price_per_megapixel?: number;
       min_steps?: number;
+    };
+    image?: {
+      example_price?: number;
+      example_description?: string;
     };
   };
 };
@@ -36,23 +39,26 @@ async function main() {
 
   const results = CONFIGURED_IMAGE_MODELS.map((model) => {
     const entry = catalog.find((candidate) => candidate.id === model);
+    const catalogPrice =
+      entry?.pricing?.image_pixel?.price_per_megapixel ??
+      entry?.pricing?.image?.example_price ??
+      null;
     const serverlessImage =
-      entry?.type === "image" &&
-      typeof entry.pricing?.image_pixel?.price_per_megapixel === "number";
-    const pricePerMegapixel =
-      entry?.pricing?.image_pixel?.price_per_megapixel ?? null;
-    const pricingBaseSteps = entry?.pricing?.image_pixel?.min_steps ?? null;
+      entry?.type === "image" && typeof catalogPrice === "number";
     const pricingMatches =
-      pricePerMegapixel === IMAGE_GENERATION_PRICE_PER_MEGAPIXEL &&
-      pricingBaseSteps === IMAGE_GENERATION_PRICING_BASE_STEPS;
+      catalogPrice === IMAGE_GENERATION_PRICE_PER_MEGAPIXEL;
 
     return {
       model,
       present: Boolean(entry),
       type: entry?.type ?? null,
       serverlessImage,
-      pricePerMegapixel,
-      pricingBaseSteps,
+      catalogPrice,
+      catalogPricingKind: entry?.pricing?.image_pixel
+        ? "per_megapixel"
+        : entry?.pricing?.image
+          ? "per_image_example"
+          : null,
       pricingMatches,
     };
   });

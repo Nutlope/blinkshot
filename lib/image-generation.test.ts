@@ -25,7 +25,7 @@ test("builds the effective styled prompt and iterative seed", () => {
       model: IMAGE_GENERATION_MODEL,
       width: 1024,
       height: 768,
-      steps: 3,
+      steps: 4,
       seed: 123,
     },
   );
@@ -67,7 +67,7 @@ test("keeps usage and timings while excluding base64 image data", () => {
       data: [
         {
           b64_json: imagePayload,
-          timings: { inference: 0.75 },
+          timings: { inference: 750 },
         },
       ],
     },
@@ -79,16 +79,16 @@ test("keeps usage and timings while excluding base64 image data", () => {
     credits: 0.002,
     nested: { images: 1 },
   });
-  assert.deepEqual(trace.metadata.timings, [{ inference: 0.75 }]);
+  assert.deepEqual(trace.metadata.timings, [{ inference: 750 }]);
   assert.equal(trace.metrics.inference_ms, 750);
-  assert.ok(Math.abs(trace.metrics.estimated_cost - 0.0021233664) < 1e-12);
+  assert.ok(Math.abs(trace.metrics.estimated_cost - 0.0013369344) < 1e-12);
   assert.deepEqual(trace.metadata.cost, {
     currency: "USD",
-    pricePerMegapixel: 0.0027,
+    pricePerMegapixel: 0.0017,
     pricingBaseSteps: 4,
     stepMultiplier: 1,
     billableMegapixels: 0.786432,
-    estimatedCost: 0.0021233664,
+    estimatedCost: 0.0013369344,
   });
   assert.equal(serialized.includes(imagePayload), false);
   assert.equal(serialized.includes("b64_json"), false);
@@ -104,8 +104,8 @@ test("scales image cost above the pricing step floor", () => {
     }),
     {
       billableMegapixels: 1.572864,
-      estimatedCost: 0.0084934656,
-      pricePerMegapixel: 0.0027,
+      estimatedCost: 0.0053477376,
+      pricePerMegapixel: 0.0017,
       pricingBaseSteps: 4,
       stepMultiplier: 2,
     },

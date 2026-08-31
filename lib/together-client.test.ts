@@ -84,11 +84,9 @@ test(
           response.end(
             JSON.stringify({
               id: "test-response",
-              model: "black-forest-labs/FLUX.1-schnell",
+              model: "Rundiffusion/Juggernaut-Lightning-Flux",
               object: "list",
-              data: [
-                { type: "b64_json", index: 0, b64_json: "fake-image" },
-              ],
+              data: [{ type: "b64_json", index: 0, b64_json: "fake-image" }],
             }),
           );
         } catch (error) {
@@ -193,10 +191,10 @@ test(
         url: "/images/generations",
         body: {
           prompt: "A calm lighthouse by the sea at sunset",
-          model: "black-forest-labs/FLUX.1-schnell",
+          model: "Rundiffusion/Juggernaut-Lightning-Flux",
           width: 1024,
           height: 768,
-          steps: 3,
+          steps: 4,
           response_format: "base64",
         },
       });

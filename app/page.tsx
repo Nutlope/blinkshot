@@ -220,8 +220,8 @@ function HomeContent() {
                 Generate images in real-time
               </p>
               <p className="mt-4 text-balance text-sm text-gray-300 md:text-base lg:text-lg">
-                Enter a prompt and generate images in milliseconds as you type.
-                Powered by Flux on Together AI.
+                Enter a prompt and generate images in seconds as you type.
+                Powered by Juggernaut Lightning Flux on Together AI.
               </p>
               {sessions && sessions.length > 0 && (
                 <div className="mt-6">

@@ -1,15 +1,14 @@
 import type { ImageStyleSlug } from "@/lib/image-style-slugs";
 
 export const IMAGE_GENERATION_MODEL =
-  "black-forest-labs/FLUX.1-schnell" as const;
+  "Rundiffusion/Juggernaut-Lightning-Flux" as const;
 
 export const IMAGE_GENERATION_WIDTH = 1024;
 export const IMAGE_GENERATION_HEIGHT = 768;
-export const IMAGE_GENERATION_STEPS = 3;
+export const IMAGE_GENERATION_STEPS = 4;
 export const ITERATIVE_MODE_SEED = 123;
-// Canonical model page: https://www.together.ai/models/flux-1-schnell-2
-export const IMAGE_GENERATION_PRICE_PER_MEGAPIXEL = 0.0027;
-// Together bills the default four-step floor even when fewer steps are requested.
+// Canonical model page: https://www.together.ai/models/juggernaut-lightning-flux
+export const IMAGE_GENERATION_PRICE_PER_MEGAPIXEL = 0.0017;
 export const IMAGE_GENERATION_PRICING_BASE_STEPS = 4;
 
 const IMAGE_STYLE_PROMPTS: Record<ImageStyleSlug, string> = {

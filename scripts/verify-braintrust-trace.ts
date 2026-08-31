@@ -75,14 +75,14 @@ async function main() {
     [trace?.error == null, "generation span contains an error"],
     [trace?.metadata?.success === true, "generation is not marked successful"],
     [
-      trace?.metadata?.model === "black-forest-labs/FLUX.1-schnell",
+      trace?.metadata?.model === "Rundiffusion/Juggernaut-Lightning-Flux",
       "model metadata is wrong",
     ],
     [
       trace?.metadata?.width === 1024 && trace?.metadata?.height === 768,
       "dimensions are wrong",
     ],
-    [trace?.metadata?.steps === 3, "steps metadata is wrong"],
+    [trace?.metadata?.steps === 4, "steps metadata is wrong"],
     [
       trace?.metadata?.iterativeMode === true && trace?.metadata?.seed === 123,
       "seed metadata is wrong",
