@@ -23,16 +23,27 @@ import {
   moderatePrompt,
 } from "@/lib/moderation/inference";
 
-let ratelimit: Ratelimit | undefined;
+const MAX_PROMPT_LENGTH = 2000;
+const MAX_API_KEY_LENGTH = 256;
 
-// Add rate limiting if Upstash API keys are set, otherwise skip
+let ratelimit: Ratelimit | undefined;
+let byokRatelimit: Ratelimit | undefined;
+
 if (process.env.UPSTASH_REDIS_REST_URL) {
+  const redis = Redis.fromEnv();
   ratelimit = new Ratelimit({
-    redis: Redis.fromEnv(),
+    redis,
     // Allow 5 requests per day (~1 prompt), then need to use API key
     limiter: Ratelimit.fixedWindow(5, "1440 m"),
     analytics: true,
     prefix: "blinkshot",
+    timeout: 0,
+  });
+  byokRatelimit = new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(60, "1 m"),
+    prefix: "blinkshot-byok",
+    timeout: 0,
   });
 }
 
@@ -104,14 +115,19 @@ export async function POST(req: Request) {
 
   try {
     const json = await req.json();
-    const { prompt, userAPIKey, iterativeMode, style } = z
+    const parsed = z
       .object({
-        prompt: z.string(),
+        prompt: z.string().max(MAX_PROMPT_LENGTH),
         iterativeMode: z.boolean(),
-        userAPIKey: z.string().optional(),
+        userAPIKey: z.string().max(MAX_API_KEY_LENGTH).optional(),
         style: imageStyleSlugSchema.optional(),
       })
       .parse(json);
+    const { prompt, iterativeMode, style } = parsed;
+    const userAPIKey = parsed.userAPIKey?.trim() || undefined;
+    if (userAPIKey && !/^[\x21-\x7e]+$/.test(userAPIKey)) {
+      return Response.json({ error: "Invalid API key" }, { status: 400 });
+    }
 
     // Server-side prompt safety gate (the real backstop since the client is
     // bypassable). Runs before any Together call so blocked/short prompts
@@ -197,13 +213,31 @@ export async function POST(req: Request) {
       client.apiKey = userAPIKey;
     }
 
-    if (ratelimit && !userAPIKey) {
-      const identifier = await getIPAddress();
-
-      const { success } = await ratelimit.limit(identifier);
+    const limiter = userAPIKey ? byokRatelimit : ratelimit;
+    if (!limiter) {
+      if (process.env.NODE_ENV === "production") {
+        console.error("Rate limiter is not configured");
+        return Response.json(
+          { error: "Service temporarily unavailable. Please try again later." },
+          { status: 503 },
+        );
+      }
+    } else {
+      let success: boolean;
+      try {
+        ({ success } = await limiter.limit(await getIPAddress()));
+      } catch (error) {
+        console.error("Rate limiter unavailable:", error);
+        return Response.json(
+          { error: "Service temporarily unavailable. Please try again later." },
+          { status: 503 },
+        );
+      }
       if (!success) {
         return Response.json(
-          "No requests left. Please add your own API key or try again in 24h.",
+          userAPIKey
+            ? "Too many requests. Please slow down and try again in a minute."
+            : "No requests left. Please add your own API key or try again in 24h.",
           {
             status: 429,
           },
@@ -236,8 +270,9 @@ export async function POST(req: Request) {
           metadata: { success: false },
           metrics: { duration_ms: performance.now() - startedAt },
         });
+        console.error("Image generation failed:", serializeBraintrustError(error, [userAPIKey]));
         return Response.json(
-          { error: String(error) },
+          { error: generationErrorMessage(error, Boolean(userAPIKey)) },
           {
             status: 500,
           },
@@ -273,20 +308,48 @@ export async function POST(req: Request) {
       );
     }
     await flushBraintrust();
-    return Response.json({ error: String(error) }, { status: 400 });
+    return Response.json({ error: "Invalid request" }, { status: 400 });
   }
 }
 
 export const runtime = "nodejs";
 
-async function getIPAddress() {
-  const FALLBACK_IP_ADDRESS = "0.0.0.0";
-  const headersList = await headers();
-  const forwardedFor = headersList.get("x-forwarded-for");
-
-  if (forwardedFor) {
-    return forwardedFor.split(",")[0] ?? FALLBACK_IP_ADDRESS;
+function generationErrorMessage(error: unknown, usingOwnKey: boolean) {
+  const status = (error as { status?: unknown } | null)?.status;
+  if (usingOwnKey && status === 401) {
+    return "Your API key is invalid. Please check it and try again.";
   }
+  if (usingOwnKey && status === 402) {
+    return "Your Together account is out of credits.";
+  }
+  return "Image generation failed. Please try again.";
+}
 
-  return headersList.get("x-real-ip") ?? FALLBACK_IP_ADDRESS;
+// Vercel sets x-real-ip and x-vercel-forwarded-for from the connection and
+// overwrites client-supplied values; x-forwarded-for is only trusted off Vercel.
+async function getIPAddress() {
+  const headersList = await headers();
+  const vercelIp =
+    headersList.get("x-real-ip") ??
+    headersList.get("x-vercel-forwarded-for")?.split(",")[0];
+  const ip =
+    vercelIp?.trim() ||
+    (process.env.VERCEL !== "1"
+      ? headersList.get("x-forwarded-for")?.split(",")[0]?.trim()
+      : undefined) ||
+    "unknown";
+  return normalizeIp(ip);
+}
+
+// IPv6 clients usually control a whole /64, so they share one bucket.
+function normalizeIp(ip: string) {
+  if (!ip.includes(":")) return ip;
+  const mapped = ip.match(/^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i);
+  if (mapped) return mapped[1];
+  const [head = "", tail = ""] = ip.toLowerCase().split("::");
+  const headGroups = head ? head.split(":") : [];
+  const tailGroups = tail ? tail.split(":") : [];
+  const missing = ip.includes("::") ? 8 - headGroups.length - tailGroups.length : 0;
+  const groups = [...headGroups, ...Array(Math.max(missing, 0)).fill("0"), ...tailGroups];
+  return `${groups.slice(0, 4).join(":")}::/64`;
 }
